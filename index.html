@@ -329,10 +329,10 @@ body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #2d3748;
 
     <!-- ยอดวันนี้ -->
     <div class="summary-grid" style="margin-bottom:14px">
-      <div class="s-box blue"><div class="lbl">รายการวันนี้</div><div class="val" id="sale-today-count">0</div></div>
-      <div class="s-box blue"><div class="lbl">ยอดขายวันนี้</div><div class="val" id="sale-today">฿0</div></div>
-      <div class="s-box red"><div class="lbl">ต้นทุนวันนี้</div><div class="val" id="sale-today-cost">฿0</div></div>
-      <div class="s-box green"><div class="lbl">กำไรวันนี้</div><div class="val" id="sale-today-profit">฿0</div></div>
+      <div class="s-box blue"><div class="lbl">รายการวันนี้</div><div class="val" id="s2-count">0</div></div>
+      <div class="s-box blue"><div class="lbl">ยอดขายวันนี้</div><div class="val" id="s2-revenue">฿0</div></div>
+      <div class="s-box red"><div class="lbl">ต้นทุนวันนี้</div><div class="val" id="s2-cost">฿0</div></div>
+      <div class="s-box green"><div class="lbl">กำไรวันนี้</div><div class="val" id="s2-profit">฿0</div></div>
     </div>
 
     <!-- สินค้าในคลัง -->
@@ -340,16 +340,18 @@ body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #2d3748;
       <div class="card-header" style="margin-bottom:12px">
         <h2 style="font-size:0.95rem;font-weight:700">📦 เลือกสินค้าที่ขาย</h2>
       </div>
-      <div id="sale-products"></div>
+      <div id="s2-products">
+        <div class="loading"><div class="spin"></div></div>
+      </div>
     </div>
 
     <!-- ประวัติการขายวันนี้ -->
     <div class="card">
       <div class="card-header" style="margin-bottom:12px">
         <h2 style="font-size:0.95rem;font-weight:700">🧾 ประวัติการขายวันนี้</h2>
-        <span id="sale-date-label" style="font-size:0.78rem;color:#718096"></span>
+        <span id="s2-date" style="font-size:0.78rem;color:#718096"></span>
       </div>
-      <div id="sales-history"></div>
+      <div id="s2-history"></div>
     </div>
 
   </div>
@@ -906,220 +908,204 @@ function fmt(n) { return n.toLocaleString('th-TH', { minimumFractionDigits: 2, m
 function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
 
 // ─── SALES PAGE ───────────────────────────────────
-let allItems = [];
-let itemCostMap = {};
-let soldMap = {};
-let currentSaleItem = null; // item ที่กำลังจะขาย
+let s2Items = [];
+let s2CostMap = {};
+let s2SoldMap = {};
+let s2CurrentItem = null;
+let s2SaveTimer = null;
 
 async function loadSalesPage() {
-  alert('loadSalesPage ถูกเรียก');
-  try {
-  document.getElementById('sale-products').innerHTML = '<div class="loading"><div class="spin"></div></div>';
-  document.getElementById('sales-history').innerHTML = '<div class="loading"><div class="spin"></div></div>';
-  document.getElementById('sale-date-label').textContent = new Date().toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const elProd = document.getElementById('s2-products');
+  const elHist = document.getElementById('s2-history');
+  if (!elProd) return;
+  elProd.innerHTML = '<div class="loading"><div class="spin"></div></div>';
+  elHist.innerHTML = '<div class="loading"><div class="spin"></div></div>';
+  document.getElementById('s2-date').textContent = new Date().toLocaleDateString('th-TH', {weekday:'long',day:'numeric',month:'long',year:'numeric'});
 
-  // โหลดสินค้า + imports
-  const { data: imports, error: impErr } = await sb.from('imports').select('id,name,shipping_cost,extra_cost');
-  if (impErr) throw new Error('โหลด imports ไม่ได้: ' + impErr.message);
+  // โหลดข้อมูล
+  const r1 = await sb.from('imports').select('id,name,shipping_cost,extra_cost');
+  const r2 = await sb.from('import_items').select('*').order('name');
+  const r3 = await sb.from('sales').select('*').order('sold_at',{ascending:false});
 
-  const { data: items, error: itemErr } = await sb.from('import_items').select('*').order('created_at');
-  if (itemErr) throw new Error('โหลด import_items ไม่ได้: ' + itemErr.message);
+  if (r1.error || r2.error) {
+    elProd.innerHTML = '<div class="empty" style="color:#c53030">โหลดข้อมูลไม่ได้ กรุณารีเฟรช</div>';
+    return;
+  }
 
-  allItems = items || [];
-  document.getElementById('sale-products').innerHTML = `<div style="padding:8px;color:#888;font-size:0.8rem">debug: โหลดได้ ${allItems.length} รายการ</div>`;
+  const imports = r1.data || [];
+  s2Items = r2.data || [];
+  const allSales = r3.data || [];
 
   // คำนวณต้นทุน/ชิ้น
-  const importMap = {};
-  (imports || []).forEach(i => importMap[i.id] = i);
-  allItems.forEach(item => {
-    const imp = importMap[item.import_id] || {};
-    const extra = (imp.shipping_cost || 0) + (imp.extra_cost || 0);
-    const sameGroup = allItems.filter(x => x.import_id === item.import_id);
-    const totalGoods = sameGroup.reduce((s, x) => s + x.qty * x.price_cny * x.rate, 0);
+  const impMap = {};
+  imports.forEach(i => impMap[i.id] = i);
+  s2CostMap = {};
+  s2Items.forEach(item => {
+    const imp = impMap[item.import_id] || {};
+    const extra = (imp.shipping_cost||0) + (imp.extra_cost||0);
+    const grp = s2Items.filter(x => x.import_id === item.import_id);
+    const totGoods = grp.reduce((s,x) => s + x.qty * x.price_cny * x.rate, 0);
     const sub = item.qty * item.price_cny * item.rate;
-    const shipAlloc = totalGoods > 0 ? (sub / totalGoods) * extra : 0;
-    itemCostMap[item.id] = item.qty > 0 ? (sub + shipAlloc) / item.qty : 0;
-    item._importName = (imp.name || '');
+    const alloc = totGoods > 0 ? (sub/totGoods)*extra : 0;
+    s2CostMap[item.id] = item.qty > 0 ? (sub+alloc)/item.qty : 0;
+    item._grp = imp.name || '';
   });
 
-  // โหลดยอดขายทั้งหมด
-  const { data: salesAll } = await sb.from('sales').select('*').order('sold_at', { ascending: false });
-  const allSales = salesAll || [];
+  // soldMap
+  s2SoldMap = {};
+  allSales.forEach(s => { s2SoldMap[s.item_id] = (s2SoldMap[s.item_id]||0) + s.qty_sold; });
 
-  // คำนวณ soldMap (สต็อกที่ขายไปทั้งหมด)
-  soldMap = {};
-  allSales.forEach(s => { soldMap[s.item_id] = (soldMap[s.item_id] || 0) + s.qty_sold; });
+  // สรุปวันนี้
+  const todayStr = new Date().toDateString();
+  const todaySales = allSales.filter(s => new Date(s.sold_at).toDateString() === todayStr);
+  const tRev = todaySales.reduce((a,x) => a + x.sell_price * x.qty_sold, 0);
+  const tCost = todaySales.reduce((a,x) => a + (s2CostMap[x.item_id]||0)*x.qty_sold + (x.ship_cost||0) + (x.box_cost||0) - (x.discount||0), 0);
+  const tProfit = tRev - tCost;
+  document.getElementById('s2-count').textContent = todaySales.length + ' รายการ';
+  document.getElementById('s2-revenue').textContent = '฿' + fmt(tRev);
+  document.getElementById('s2-cost').textContent = '฿' + fmt(tCost);
+  const ep = document.getElementById('s2-profit');
+  ep.textContent = '฿' + fmt(tProfit);
+  ep.style.color = tProfit >= 0 ? '#276749' : '#c53030';
 
-  // ยอดวันนี้
-  const today = new Date().toDateString();
-  const todaySales = allSales.filter(s => new Date(s.sold_at).toDateString() === today);
-  const todayRevenue = todaySales.reduce((s, x) => s + x.sell_price * x.qty_sold, 0);
-  const todayCost = todaySales.reduce((s, x) => (itemCostMap[x.item_id] || 0) * x.qty_sold + x.ship_cost + x.box_cost - x.discount + s, 0);
-  const todayProfit = todayRevenue - todayCost;
-  document.getElementById('sale-today-count').textContent = todaySales.length + ' รายการ';
-  document.getElementById('sale-today').textContent = '฿' + fmt(todayRevenue);
-  document.getElementById('sale-today-cost').textContent = '฿' + fmt(todayCost);
-  const stp = document.getElementById('sale-today-profit');
-  stp.textContent = '฿' + fmt(todayProfit);
-  stp.style.color = todayProfit >= 0 ? '#276749' : '#c53030';
-
-  // render การ์ดสินค้า
-  if (!allItems.length) {
-    document.getElementById('sale-products').innerHTML = '<div class="empty">⚠️ ไม่พบสินค้าในฐานข้อมูล<br>ลองกลับไปหน้าคลังแล้วสร้างสินค้าก่อนครับ</div>';
+  // render สินค้า
+  if (!s2Items.length) {
+    elProd.innerHTML = '<div class="empty">ยังไม่มีสินค้าในคลัง<br>ไปเพิ่มที่แถบ "คลัง" ก่อน</div>';
   } else {
-    document.getElementById('sale-products').innerHTML = allItems.map(item => {
-      const remaining = item.qty - (soldMap[item.id] || 0);
-      const costUnit = itemCostMap[item.id] || 0;
-      const imgHtml = item.image_url
-        ? `<img src="${item.image_url}" style="width:52px;height:52px;object-fit:cover;border-radius:8px;flex-shrink:0">`
-        : `<div style="width:52px;height:52px;background:#f7fafc;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;border:1px solid #e2e8f0">📦</div>`;
-      return `
-      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f7fafc">
-        ${imgHtml}
-        <div style="flex:1;min-width:0">
-          <div style="font-weight:700;font-size:0.9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(item.name || 'ไม่มีชื่อ')}</div>
-          <div style="font-size:0.75rem;color:#718096;margin-top:1px">${esc(item._importName)}</div>
-          <div style="display:flex;gap:10px;margin-top:3px">
-            <span style="font-size:0.78rem;color:#2b6cb0">ต้นทุน ฿${fmt(costUnit)}</span>
-            <span style="font-size:0.78rem;font-weight:700;color:${remaining <= 0 ? '#c53030' : remaining <= 5 ? '#c05621' : '#276749'}">คงเหลือ ${remaining}/${item.qty} ชิ้น</span>
-          </div>
-        </div>
-        ${remaining > 0
-          ? `<button onclick="openSaleModalById('${item.id}')" style="flex-shrink:0;padding:8px 14px;background:#e53e3e;color:white;border:none;border-radius:8px;font-size:0.85rem;font-weight:700;cursor:pointer">ขาย</button>`
-          : `<span style="flex-shrink:0;padding:8px 14px;background:#f7fafc;color:#a0aec0;border-radius:8px;font-size:0.8rem">หมด</span>`
-        }
-      </div>`;
-    }).join('');
+    let html = '';
+    s2Items.forEach((item, idx) => {
+      const rem = item.qty - (s2SoldMap[item.id]||0);
+      const cost = s2CostMap[item.id]||0;
+      const img = item.image_url
+        ? '<img src="'+item.image_url+'" style="width:52px;height:52px;object-fit:cover;border-radius:8px;flex-shrink:0">'
+        : '<div style="width:52px;height:52px;background:#f7fafc;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;border:1px solid #e2e8f0">📦</div>';
+      const remColor = rem <= 0 ? '#c53030' : rem <= 5 ? '#c05621' : '#276749';
+      const btn = rem > 0
+        ? '<button data-idx="'+idx+'" onclick="s2OpenModal(this.dataset.idx)" style="flex-shrink:0;padding:8px 14px;background:#e53e3e;color:white;border:none;border-radius:8px;font-size:0.85rem;font-weight:700;cursor:pointer">ขาย</button>'
+        : '<span style="flex-shrink:0;padding:8px 14px;background:#f7fafc;color:#a0aec0;border-radius:8px;font-size:0.8rem">หมด</span>';
+      html += '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f7fafc">'
+        + img
+        + '<div style="flex:1;min-width:0">'
+        + '<div style="font-weight:700;font-size:0.9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(item.name||'ไม่มีชื่อ')+'</div>'
+        + '<div style="font-size:0.75rem;color:#718096">'+esc(item._grp)+'</div>'
+        + '<div style="display:flex;gap:10px;margin-top:3px">'
+        + '<span style="font-size:0.78rem;color:#2b6cb0">ต้นทุน ฿'+fmt(cost)+'</span>'
+        + '<span style="font-size:0.78rem;font-weight:700;color:'+remColor+'">คงเหลือ '+rem+'/'+item.qty+' ชิ้น</span>'
+        + '</div></div>'
+        + btn + '</div>';
+    });
+    elProd.innerHTML = html;
   }
 
   // render ประวัติวันนี้
   const itemMap = {};
-  allItems.forEach(i => itemMap[i.id] = i);
-
+  s2Items.forEach(i => itemMap[i.id] = i);
   if (!todaySales.length) {
-    document.getElementById('sales-history').innerHTML = '<div class="empty">ยังไม่มีการขายวันนี้</div>';
+    elHist.innerHTML = '<div class="empty">ยังไม่มีการขายวันนี้</div>';
   } else {
-    document.getElementById('sales-history').innerHTML = todaySales.map(s => {
+    let hhtml = '';
+    todaySales.forEach(s => {
       const item = itemMap[s.item_id] || {};
-      const costUnit = itemCostMap[s.item_id] || 0;
-      const revenue = s.sell_price * s.qty_sold;
-      const totalCost = (costUnit * s.qty_sold) + s.ship_cost + s.box_cost - s.discount;
-      const profit = revenue - totalCost;
-      const time = new Date(s.sold_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
-      const imgHtml = item.image_url
-        ? `<img src="${item.image_url}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;flex-shrink:0">`
-        : `<div style="width:40px;height:40px;background:#f7fafc;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0">📦</div>`;
+      const rev = s.sell_price * s.qty_sold;
+      const tc = (s2CostMap[s.item_id]||0)*s.qty_sold + (s.ship_cost||0) + (s.box_cost||0) - (s.discount||0);
+      const profit = rev - tc;
+      const time = new Date(s.sold_at).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
+      const img2 = item.image_url
+        ? '<img src="'+item.image_url+'" style="width:40px;height:40px;object-fit:cover;border-radius:6px;flex-shrink:0">'
+        : '<div style="width:40px;height:40px;background:#f7fafc;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0">📦</div>';
       const extras = [];
-      if (s.ship_cost > 0) extras.push(`ส่ง ฿${fmt(s.ship_cost)}`);
-      if (s.box_cost > 0) extras.push(`กล่อง ฿${fmt(s.box_cost)}`);
-      if (s.discount > 0) extras.push(`ลด ฿${fmt(s.discount)}`);
-      return `
-      <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f7fafc">
-        ${imgHtml}
-        <div style="flex:1;min-width:0">
-          <div style="display:flex;align-items:baseline;gap:6px">
-            <span style="font-weight:700;font-size:0.88rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(item.name || '?')}</span>
-            <span style="font-size:0.72rem;color:#a0aec0;flex-shrink:0">${time}</span>
-          </div>
-          <div style="font-size:0.75rem;color:#718096">${s.qty_sold} ชิ้น × ฿${fmt(s.sell_price)}${extras.length ? ' · ' + extras.join(' · ') : ''}${s.note ? ' · ' + esc(s.note) : ''}</div>
-          <div style="display:flex;gap:10px;margin-top:2px">
-            <span style="font-size:0.78rem;color:#2b6cb0">รายได้ ฿${fmt(revenue)}</span>
-            <span style="font-size:0.78rem;font-weight:700;color:${profit >= 0 ? '#276749' : '#c53030'}">กำไร ฿${fmt(profit)}</span>
-          </div>
-        </div>
-        <button onclick="deleteSale('${s.id}')" style="background:none;border:none;color:#fc8181;cursor:pointer;font-size:1rem;padding:4px 6px;flex-shrink:0">✕</button>
-      </div>`;
-    }).join('');
-  }
-  } catch(e) {
-    document.getElementById('sale-products').innerHTML = `<div class="empty" style="color:#c53030">❌ Error: ${e.message || String(e)}</div>`;
-    document.getElementById('sales-history').innerHTML = '';
+      if (s.ship_cost>0) extras.push('ส่ง ฿'+fmt(s.ship_cost));
+      if (s.box_cost>0) extras.push('กล่อง ฿'+fmt(s.box_cost));
+      if (s.discount>0) extras.push('ลด ฿'+fmt(s.discount));
+      hhtml += '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f7fafc">'
+        + img2
+        + '<div style="flex:1;min-width:0">'
+        + '<div style="display:flex;align-items:baseline;gap:6px"><span style="font-weight:700;font-size:0.88rem">'+esc(item.name||'?')+'</span><span style="font-size:0.72rem;color:#a0aec0">'+time+'</span></div>'
+        + '<div style="font-size:0.75rem;color:#718096">'+s.qty_sold+' ชิ้น × ฿'+fmt(s.sell_price)+(extras.length?' · '+extras.join(' · '):'')+(s.note?' · '+esc(s.note):'')+'</div>'
+        + '<div style="display:flex;gap:10px;margin-top:2px">'
+        + '<span style="font-size:0.78rem;color:#2b6cb0">รายได้ ฿'+fmt(rev)+'</span>'
+        + '<span style="font-size:0.78rem;font-weight:700;color:'+(profit>=0?'#276749':'#c53030')+'">กำไร ฿'+fmt(profit)+'</span>'
+        + '</div></div>'
+        + '<button onclick="s2DelSale(\''+s.id+'\')" style="background:none;border:none;color:#fc8181;cursor:pointer;font-size:1rem;padding:4px 6px;flex-shrink:0">✕</button>'
+        + '</div>';
+    });
+    elHist.innerHTML = hhtml;
   }
 }
 
-// ─── SALE MODAL ───────────────────────────────────
-function openSaleModalById(itemId) {
-  const item = allItems.find(i => String(i.id) === String(itemId));
+function s2OpenModal(idx) {
+  const item = s2Items[parseInt(idx)];
   if (!item) return;
-  openSaleModal(item);
-}
-
-function openSaleModal(item) {
-  currentSaleItem = item;
-  const remaining = item.qty - (soldMap[item.id] || 0);
-  const costUnit = itemCostMap[item.id] || 0;
-
-  document.getElementById('sm-item-name').textContent = item.name || 'ไม่มีชื่อ';
-  document.getElementById('sm-item-stock').textContent = `คงเหลือ ${remaining} ชิ้น · ต้นทุน ฿${fmt(costUnit)}/ชิ้น`;
+  s2CurrentItem = item;
+  const rem = item.qty - (s2SoldMap[item.id]||0);
+  const cost = s2CostMap[item.id]||0;
+  document.getElementById('sm-item-name').textContent = item.name||'ไม่มีชื่อ';
+  document.getElementById('sm-item-stock').textContent = 'คงเหลือ '+rem+' ชิ้น · ต้นทุน ฿'+fmt(cost)+'/ชิ้น';
   document.getElementById('sm-qty').value = 1;
-  document.getElementById('sm-qty').max = remaining;
-  document.getElementById('sm-price').value = item.sell_price || 0;
+  document.getElementById('sm-qty').max = rem;
+  document.getElementById('sm-price').value = item.sell_price||0;
   document.getElementById('sm-ship').value = 0;
   document.getElementById('sm-box').value = 0;
   document.getElementById('sm-discount').value = 0;
   document.getElementById('sm-note').value = '';
   calcSaleProfit();
   document.getElementById('sale-modal').classList.add('open');
-  setTimeout(() => document.getElementById('sm-qty').focus(), 150);
+  setTimeout(()=>document.getElementById('sm-qty').focus(),150);
 }
 
-function closeSaleModal() { document.getElementById('sale-modal').classList.remove('open'); currentSaleItem = null; }
-
-let autoSaveTimer = null;
+function closeSaleModal() {
+  document.getElementById('sale-modal').classList.remove('open');
+  s2CurrentItem = null;
+  clearTimeout(s2SaveTimer);
+}
 
 function calcSaleProfit() {
-  if (!currentSaleItem) return;
-  const costUnit = itemCostMap[currentSaleItem.id] || 0;
-  const qty = parseFloat(document.getElementById('sm-qty').value) || 0;
-  const price = parseFloat(document.getElementById('sm-price').value) || 0;
-  const ship = parseFloat(document.getElementById('sm-ship').value) || 0;
-  const box = parseFloat(document.getElementById('sm-box').value) || 0;
-  const discount = parseFloat(document.getElementById('sm-discount').value) || 0;
-  const revenue = price * qty;
-  const totalCost = (costUnit * qty) + ship + box - discount;
-  const profit = revenue - totalCost;
-  document.getElementById('sp-cost').textContent = '฿' + fmt(costUnit);
-  document.getElementById('sp-revenue').textContent = '฿' + fmt(revenue);
-  document.getElementById('sp-totalcost').textContent = '฿' + fmt(totalCost);
+  if (!s2CurrentItem) return;
+  const cost = s2CostMap[s2CurrentItem.id]||0;
+  const qty = parseFloat(document.getElementById('sm-qty').value)||0;
+  const price = parseFloat(document.getElementById('sm-price').value)||0;
+  const ship = parseFloat(document.getElementById('sm-ship').value)||0;
+  const box = parseFloat(document.getElementById('sm-box').value)||0;
+  const disc = parseFloat(document.getElementById('sm-discount').value)||0;
+  const rev = price*qty;
+  const tc = cost*qty + ship + box - disc;
+  const profit = rev - tc;
+  document.getElementById('sp-cost').textContent = '฿'+fmt(cost);
+  document.getElementById('sp-revenue').textContent = '฿'+fmt(rev);
+  document.getElementById('sp-totalcost').textContent = '฿'+fmt(tc);
   const sp = document.getElementById('sp-profit');
-  sp.textContent = '฿' + fmt(profit);
-  sp.style.color = profit >= 0 ? '#276749' : '#c53030';
-
-  // auto-save debounce
-  if (qty > 0 && price > 0) {
+  sp.textContent = '฿'+fmt(profit);
+  sp.style.color = profit>=0?'#276749':'#c53030';
+  if (qty>0 && price>0) {
     document.getElementById('sm-status').textContent = '⏳ กำลังจะบันทึก...';
-    document.getElementById('sm-status').style.color = '#a0aec0';
-    clearTimeout(autoSaveTimer);
-    autoSaveTimer = setTimeout(saveSale, 1500);
+    clearTimeout(s2SaveTimer);
+    s2SaveTimer = setTimeout(saveSale, 1500);
   }
 }
 
 async function saveSale() {
-  if (!currentSaleItem) return;
-  const qty = parseFloat(document.getElementById('sm-qty').value) || 0;
-  if (qty <= 0) { toast('กรุณาใส่จำนวน'); return; }
-  const remaining = currentSaleItem.qty - (soldMap[currentSaleItem.id] || 0);
-  if (qty > remaining) { toast(`⚠️ สต็อกเหลือแค่ ${remaining} ชิ้น`); return; }
-
+  if (!s2CurrentItem) return;
+  const qty = parseFloat(document.getElementById('sm-qty').value)||0;
+  if (qty<=0) { toast('กรุณาใส่จำนวน'); return; }
+  const rem = s2CurrentItem.qty - (s2SoldMap[s2CurrentItem.id]||0);
+  if (qty>rem) { toast('สต็อกเหลือแค่ '+rem+' ชิ้น'); return; }
   const status = document.getElementById('sm-status');
   status.textContent = '⏳ กำลังบันทึก...';
-
-  const { error } = await sb.from('sales').insert({
-    item_id: currentSaleItem.id,
+  const {error} = await sb.from('sales').insert({
+    item_id: s2CurrentItem.id,
     qty_sold: qty,
-    sell_price: parseFloat(document.getElementById('sm-price').value) || 0,
-    ship_cost: parseFloat(document.getElementById('sm-ship').value) || 0,
-    box_cost: parseFloat(document.getElementById('sm-box').value) || 0,
-    discount: parseFloat(document.getElementById('sm-discount').value) || 0,
+    sell_price: parseFloat(document.getElementById('sm-price').value)||0,
+    ship_cost: parseFloat(document.getElementById('sm-ship').value)||0,
+    box_cost: parseFloat(document.getElementById('sm-box').value)||0,
+    discount: parseFloat(document.getElementById('sm-discount').value)||0,
     note: document.getElementById('sm-note').value.trim(),
   });
-
-  if (error) { status.textContent = '❌ บันทึกไม่สำเร็จ'; status.style.color = '#c53030'; return; }
-  status.textContent = '✅ บันทึกแล้ว!'; status.style.color = '#276749';
-  setTimeout(() => { closeSaleModal(); loadSalesPage(); }, 600);
+  if (error) { status.textContent = '❌ บันทึกไม่สำเร็จ'; status.style.color='#c53030'; return; }
+  status.textContent = '✅ บันทึกแล้ว!'; status.style.color='#276749';
+  setTimeout(()=>{ closeSaleModal(); loadSalesPage(); }, 600);
 }
 
-async function deleteSale(id) {
+async function s2DelSale(id) {
   if (!confirm('ลบรายการขายนี้?')) return;
   await sb.from('sales').delete().eq('id', id);
   toast('ลบแล้ว');
