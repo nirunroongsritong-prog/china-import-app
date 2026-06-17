@@ -913,19 +913,22 @@ let s2CurrentItem = null;
 let s2SaveTimer = null;
 
 async function loadSalesPage() {
-  document.getElementById('s2-products').innerHTML = '<div class="loading"><div class="spin"></div></div>';
-  document.getElementById('s2-history').innerHTML = '<div class="loading"><div class="spin"></div></div>';
+  const elProd = document.getElementById('s2-products');
+  const elHist = document.getElementById('s2-history');
+  if (!elProd || !elHist) return;
+  elProd.innerHTML = '<div class="loading"><div class="spin"></div></div>';
+  elHist.innerHTML = '<div class="loading"><div class="spin"></div></div>';
   document.getElementById('s2-date').textContent = new Date().toLocaleDateString('th-TH', {weekday:'long',day:'numeric',month:'long',year:'numeric'});
   try {
 
   // โหลดข้อมูล
   let r1, r2, r3;
   try {
-    [r1, r2] = await Promise.all([
+    [r1, r2, r3] = await Promise.all([
       sb.from('imports').select('id,name,shipping_cost,extra_cost'),
       sb.from('import_items').select('*').order('name'),
+      sb.from('sales').select('*').order('sold_at',{ascending:false})
     ]);
-    r3 = { data: [], error: null };
   } catch(e) {
     document.getElementById('s2-products').innerHTML = '<div class="empty" style="color:#c53030">❌ ' + e.message + '</div>';
     document.getElementById('s2-history').innerHTML = '';
