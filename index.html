@@ -340,9 +340,7 @@ body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #2d3748;
       <div class="card-header" style="margin-bottom:12px">
         <h2 style="font-size:0.95rem;font-weight:700">📦 เลือกสินค้าที่ขาย</h2>
       </div>
-      <div id="s2-products">
-        <div class="empty">VERSION 3 - กดแถบขายเพื่อโหลด</div>
-      </div>
+      <div id="s2-products"></div>
     </div>
 
     <!-- ประวัติการขายวันนี้ -->
@@ -539,7 +537,7 @@ function switchTab(tab) {
     document.getElementById('header-title').textContent = '🛒 บันทึกการขาย';
     document.getElementById('btn-back-wrap').style.display = 'none';
     document.getElementById('header-sub').textContent = '';
-    try { loadSalesPage(); } catch(ex) { document.getElementById('s2-products').innerHTML = '<div class="empty" style="color:red">switchTab error: '+ex.message+'</div>'; }
+    setTimeout(() => loadSalesPage(), 50);
   } else if (tab === 'summary') {
     document.getElementById('page-summary').classList.add('active');
     document.getElementById('nav-summary').classList.add('active');
