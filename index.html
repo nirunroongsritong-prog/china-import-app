@@ -1368,6 +1368,12 @@ async function initApp() {
 }
 
 // ─── INIT ─────────────────────────────────────────
+// Auto-load sales page when it becomes active
+new MutationObserver(() => {
+  const pg = document.getElementById('page-sales');
+  if (pg && pg.classList.contains('active')) loadSalesPage();
+}).observe(document.body, { attributes: true, subtree: true, attributeFilter: ['class'] });
+
 initApp();
 </script>
 </body>
