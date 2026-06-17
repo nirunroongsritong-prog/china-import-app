@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>นำเข้าสินค้าจีน</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #2d3748; min-height: 100vh; }
+
+.header {
+  background: linear-gradient(135deg, #e53e3e, #c53030);
+  color: white; padding: 16px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2); position: sticky; top: 0; z-index: 100;
+}
+.header h1 { font-size: 1.2rem; font-weight: 700; }
+.header-left { display: flex; align-items: center; gap: 10px; }
+.btn-back { background: rgba(255,255,255,0.2); border: none; color: white; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; }
+.btn-back:hover { background: rgba(255,255,255,0.3); }
+
+.container { max-width: 900px; margin: 0 auto; padding: 20px 16px; }
+
+/* Cards */
+.card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+
+/* Import list */
+.import-grid { display: grid; gap: 12px; }
+.import-item {
+  background: white; border-radius: 10px; padding: 16px 20px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08); cursor: pointer;
+  display: flex; justify-content: space-between; align-items: center;
+  transition: box-shadow 0.2s, transform 0.1s; border-left: 4px solid #e53e3e;
+}
+.import-item:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.12); transform: translateY(-1px); }
+.import-item h3 { font-size: 1rem; font-weight: 700; margin-bottom: 4px; }
+.import-item .meta { font-size: 0.8rem; color: #718096; }
+.import-item .stats { text-align: right; }
+.import-item .stats .total { font-size: 1.1rem; font-weight: 700; color: #e53e3e; }
+.import-item .stats .profit { font-size: 0.85rem; font-weight: 600; }
+
+.btn-new {
+  width: 100%; padding: 14px; background: #e53e3e; color: white;
+  border: none; border-radius: 10px; font-size: 1rem; font-weight: 700;
+  cursor: pointer; transition: background 0.2s; margin-bottom: 16px;
+}
+.btn-new:hover { background: #c53030; }
+
+/* Modal */
+.modal-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  z-index: 200; align-items: center; justify-content: center; padding: 16px;
+}
+.modal-overlay.open { display: flex; }
+.modal { background: white; border-radius: 12px; padding: 24px; width: 100%; max-width: 400px; }
+.modal h2 { font-size: 1.1rem; margin-bottom: 16px; }
+.modal input, .modal select {
+  width: 100%; padding: 10px 12px; border: 2px solid #e2e8f0;
+  border-radius: 8px; font-size: 1rem; outline: none; margin-bottom: 12px;
+}
+.modal input:focus { border-color: #e53e3e; }
+.modal-btns { display: flex; gap: 8px; }
+.btn-primary { flex: 1; padding: 10px; background: #e53e3e; color: white; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 700; cursor: pointer; }
+.btn-cancel { flex: 1; padding: 10px; background: #edf2f7; color: #4a5568; border: none; border-radius: 8px; font-size: 0.95rem; cursor: pointer; }
+
+/* Detail view */
+.settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media(max-width:500px) { .settings-grid { grid-template-columns: 1fr; } }
+
+.field label { display: block; font-size: 0.78rem; color: #718096; margin-bottom: 4px; font-weight: 600; }
+.field input {
+  width: 100%; padding: 9px 12px; border: 2px solid #e2e8f0;
+  border-radius: 8px; font-size: 0.95rem; outline: none; transition: border-color 0.2s;
+}
+.field input:focus { border-color: #e53e3e; }
+
+.card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.card-header h2 { font-size: 1rem; font-weight: 700; }
+.btn-add { background: #e53e3e; color: white; border: none; padding: 7px 14px; border-radius: 7px; font-size: 0.85rem; cursor: pointer; font-weight: 600; }
+.btn-add:hover { background: #c53030; }
+
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; min-width: 750px; }
+thead th { background: #f7fafc; padding: 9px 10px; text-align: left; font-size: 0.73rem; color: #718096; font-weight: 700; text-transform: uppercase; border-bottom: 2px solid #e2e8f0; }
+tbody tr { border-bottom: 1px solid #f0f4f8; }
+tbody td { padding: 8px 10px; vertical-align: middle; }
+.td-input { width: 100%; border: 1px solid #e2e8f0; border-radius: 6px; padding: 5px 7px; font-size: 0.88rem; outline: none; }
+.td-input:focus { border-color: #e53e3e; }
+.calc-val { font-weight: 600; font-size: 0.88rem; }
+.red { color: #c53030; }
+.green { color: #276749; }
+.orange { color: #c05621; }
+.btn-del { background: none; border: none; color: #fc8181; cursor: pointer; font-size: 1.1rem; padding: 3px 7px; border-radius: 4px; }
+.btn-del:hover { background: #fff5f5; color: #e53e3e; }
+
+.summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.s-box { background: #f7fafc; border-radius: 10px; padding: 12px 14px; border-left: 4px solid #e2e8f0; }
+.s-box.red { border-color: #e53e3e; }
+.s-box.green { border-color: #38a169; }
+.s-box.blue { border-color: #3182ce; }
+.s-box.orange { border-color: #dd6b20; }
+.s-box .lbl { font-size: 0.72rem; color: #718096; margin-bottom: 3px; font-weight: 600; }
+.s-box .val { font-size: 1.15rem; font-weight: 700; }
+.s-box.red .val { color: #c53030; }
+.s-box.green .val { color: #276749; }
+.s-box.blue .val { color: #2b6cb0; }
+.s-box.orange .val { color: #c05621; }
+
+.empty { text-align: center; color: #a0aec0; padding: 28px; font-size: 0.9rem; }
+
+.save-bar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: white; border-top: 1px solid #e2e8f0;
+  padding: 12px 20px; display: flex; gap: 10px; z-index: 50;
+}
+.btn-save { flex: 1; padding: 12px; background: #e53e3e; color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: 700; cursor: pointer; }
+.btn-save:hover { background: #c53030; }
+.btn-delete-import { padding: 12px 16px; background: #fed7d7; color: #c53030; border: none; border-radius: 8px; font-size: 0.9rem; font-weight: 700; cursor: pointer; }
+.btn-delete-import:hover { background: #fc8181; color: white; }
+
+.toast {
+  position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+  background: #2d3748; color: white; padding: 10px 20px; border-radius: 8px;
+  font-size: 0.9rem; z-index: 300; opacity: 0; transition: opacity 0.3s;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; }
+
+.loading { text-align: center; padding: 40px; color: #a0aec0; }
+.spin { display: inline-block; width: 24px; height: 24px; border: 3px solid #e2e8f0; border-top-color: #e53e3e; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 8px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+#view-list, #view-detail { display: none; }
+#view-list.active, #view-detail.active { display: block; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <span id="btn-back-wrap" style="display:none">
+      <button class="btn-back" onclick="showList()">← กลับ</button>
+    </span>
+    <h1 id="header-title">🇨🇳 นำเข้าสินค้าจีน</h1>
+  </div>
+  <div id="header-date" style="font-size:0.8rem;opacity:0.85"></div>
+</div>
+
+<!-- View: List -->
+<div id="view-list" class="active">
+  <div class="container">
+    <button class="btn-new" onclick="openNewModal()">+ สร้างรอบสั่งของใหม่</button>
+    <div id="import-list" class="import-grid">
+      <div class="loading"><div class="spin"></div><br>กำลังโหลด...</div>
+    </div>
+  </div>
+</div>
+
+<!-- View: Detail -->
+<div id="view-detail">
+  <div class="container" style="padding-bottom: 80px;">
+
+    <!-- Settings -->
+    <div class="card">
+      <div class="settings-grid">
+        <div class="field">
+          <label>ค่าขนส่งรวม (บาท)</label>
+          <input type="number" id="d-shipping" value="0" step="1" min="0" oninput="recalc()">
+        </div>
+        <div class="field">
+          <label>ค่าธรรมเนียม/อื่นๆ (บาท)</label>
+          <input type="number" id="d-extra" value="0" step="1" min="0" oninput="recalc()">
+        </div>
+      </div>
+    </div>
+
+    <!-- Items -->
+    <div class="card">
+      <div class="card-header">
+        <h2>📦 รายการสินค้า</h2>
+        <button class="btn-add" onclick="addRow()">+ เพิ่มสินค้า</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="min-width:140px">ชื่อสินค้า</th>
+              <th style="min-width:65px">จำนวน</th>
+              <th style="min-width:90px">ราคา/ชิ้น (¥)</th>
+              <th style="min-width:80px">เรท (¥→฿)</th>
+              <th style="min-width:100px">ต้นทุนรวม (฿)</th>
+              <th style="min-width:90px">ค่าส่งแบ่ง (฿)</th>
+              <th style="min-width:100px">ต้นทุน/ชิ้น (฿)</th>
+              <th style="min-width:100px">ราคาขาย/ชิ้น (฿)</th>
+              <th style="min-width:80px">กำไร/ชิ้น (฿)</th>
+              <th style="min-width:80px">กำไรรวม (฿)</th>
+              <th style="min-width:36px"></th>
+            </tr>
+          </thead>
+          <tbody id="items-body">
+            <tr><td colspan="11" class="empty">กดปุ่ม "+ เพิ่มสินค้า"</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Summary -->
+    <div class="card">
+      <div class="summary-grid">
+        <div class="s-box blue"><div class="lbl">จำนวนรายการ</div><div class="val" id="s-items">0</div></div>
+        <div class="s-box blue"><div class="lbl">ชิ้นทั้งหมด</div><div class="val" id="s-qty">0</div></div>
+        <div class="s-box red"><div class="lbl">ต้นทุนสินค้า (฿)</div><div class="val" id="s-cost">฿0</div></div>
+        <div class="s-box orange"><div class="lbl">ค่าขนส่ง+ค่าธรรมเนียม (฿)</div><div class="val" id="s-ship">฿0</div></div>
+        <div class="s-box red"><div class="lbl">ต้นทุนรวม (฿)</div><div class="val" id="s-total">฿0</div></div>
+        <div class="s-box blue"><div class="lbl">ราคาขายรวม (฿)</div><div class="val" id="s-sell">฿0</div></div>
+        <div class="s-box green"><div class="lbl">กำไรรวม (฿)</div><div class="val" id="s-profit">฿0</div></div>
+        <div class="s-box green"><div class="lbl">อัตรากำไร (%)</div><div class="val" id="s-margin">0%</div></div>
+      </div>
+    </div>
+
+  </div>
+  <div class="save-bar">
+    <button class="btn-delete-import" onclick="deleteImport()">ลบรอบนี้</button>
+    <button class="btn-save" onclick="saveAll()">💾 บันทึก</button>
+  </div>
+</div>
+
+<!-- Modal: New Import -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h2>สร้างรอบสั่งของใหม่</h2>
+    <input type="text" id="m-name" placeholder="ชื่อรอบ เช่น รอบมิถุนายน 2567" />
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">ยกเลิก</button>
+      <button class="btn-primary" onclick="createImport()">สร้าง</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://hnregxwwuscdiujuvyvi.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_ROL_c5M1TSJy_7YWoR0Tnw_R00pzLZd';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let currentImport = null;
+let rows = [];
+
+// ─── TOAST ───────────────────────────────────────
+function toast(msg, dur = 2000) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
+}
+
+// ─── VIEWS ───────────────────────────────────────
+function showList() {
+  document.getElementById('view-list').classList.add('active');
+  document.getElementById('view-detail').classList.remove('active');
+  document.getElementById('btn-back-wrap').style.display = 'none';
+  document.getElementById('header-title').textContent = '🇨🇳 นำเข้าสินค้าจีน';
+  document.getElementById('header-date').textContent = '';
+  currentImport = null;
+  rows = [];
+  loadList();
+}
+
+function showDetail(imp) {
+  currentImport = imp;
+  document.getElementById('view-list').classList.remove('active');
+  document.getElementById('view-detail').classList.add('active');
+  document.getElementById('btn-back-wrap').style.display = 'inline';
+  document.getElementById('header-title').textContent = imp.name;
+  document.getElementById('header-date').textContent = new Date(imp.created_at).toLocaleDateString('th-TH');
+  document.getElementById('d-shipping').value = imp.shipping_cost || 0;
+  document.getElementById('d-extra').value = imp.extra_cost || 0;
+  loadItems(imp.id);
+}
+
+// ─── LIST ─────────────────────────────────────────
+async function loadList() {
+  const el = document.getElementById('import-list');
+  el.innerHTML = '<div class="loading"><div class="spin"></div><br>กำลังโหลด...</div>';
+
+  const { data, error } = await sb.from('imports').select('*').order('created_at', { ascending: false });
+  if (error) { el.innerHTML = '<div class="empty">โหลดข้อมูลไม่ได้ กรุณาลองใหม่</div>'; return; }
+
+  if (!data.length) { el.innerHTML = '<div class="empty">ยังไม่มีรอบสั่งของ<br>กดปุ่มด้านบนเพื่อเริ่มต้น</div>'; return; }
+
+  // Load summaries
+  const ids = data.map(d => d.id);
+  const { data: items } = await sb.from('import_items').select('*').in('import_id', ids);
+
+  el.innerHTML = data.map(imp => {
+    const its = (items || []).filter(i => i.import_id === imp.id);
+    const totalCost = calcTotalCost(its, imp.shipping_cost + imp.extra_cost);
+    const totalSell = its.reduce((s, i) => s + i.sell_price * i.qty, 0);
+    const profit = totalSell - totalCost;
+    return `
+    <div class="import-item" onclick="showDetail(${JSON.stringify(imp).replace(/"/g,'&quot;')})">
+      <div>
+        <h3>${imp.name}</h3>
+        <div class="meta">${its.length} รายการ · ${new Date(imp.created_at).toLocaleDateString('th-TH')}</div>
+      </div>
+      <div class="stats">
+        <div class="total">฿${fmt(totalCost)}</div>
+        <div class="profit ${profit >= 0 ? 'green' : 'red'}">กำไร ฿${fmt(profit)}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function calcTotalCost(items, extra) {
+  const totalGoods = items.reduce((s, i) => s + i.qty * i.price_cny * i.rate, 0);
+  return items.reduce((s, i) => {
+    const sub = i.qty * i.price_cny * i.rate;
+    const ship = totalGoods > 0 ? (sub / totalGoods) * extra : 0;
+    return s + sub + ship;
+  }, 0);
+}
+
+// ─── MODAL ───────────────────────────────────────
+function openNewModal() {
+  document.getElementById('m-name').value = '';
+  document.getElementById('modal').classList.add('open');
+  setTimeout(() => document.getElementById('m-name').focus(), 100);
+}
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+
+document.getElementById('m-name').addEventListener('keydown', e => { if (e.key === 'Enter') createImport(); });
+
+async function createImport() {
+  const name = document.getElementById('m-name').value.trim();
+  if (!name) { toast('กรุณาใส่ชื่อรอบ'); return; }
+  closeModal();
+  const { data, error } = await sb.from('imports').insert({ name, shipping_cost: 0, extra_cost: 0 }).select().single();
+  if (error) { toast('สร้างไม่สำเร็จ'); return; }
+  showDetail(data);
+}
+
+// ─── ITEMS ───────────────────────────────────────
+async function loadItems(importId) {
+  const { data, error } = await sb.from('import_items').select('*').eq('import_id', importId).order('created_at');
+  rows = (data || []).map(i => ({ ...i, _dirty: false }));
+  renderTable();
+  recalc();
+}
+
+function addRow() {
+  rows.push({ id: null, import_id: currentImport.id, name: '', qty: 1, price_cny: 0, rate: 4.9, sell_price: 0, _dirty: true, _new: true });
+  renderTable();
+  recalc();
+  // focus last name input
+  const inputs = document.querySelectorAll('#items-body .td-input[data-field="name"]');
+  if (inputs.length) inputs[inputs.length - 1].focus();
+}
+
+function updateRow(idx, field, val) {
+  if (field === 'name') rows[idx][field] = val;
+  else rows[idx][field] = parseFloat(val) || 0;
+  rows[idx]._dirty = true;
+  recalc();
+}
+
+function deleteRowLocal(idx) {
+  rows[idx]._deleted = true;
+  renderTable();
+  recalc();
+}
+
+function renderTable() {
+  const tbody = document.getElementById('items-body');
+  const visible = rows.filter(r => !r._deleted);
+  if (!visible.length) {
+    tbody.innerHTML = '<tr><td colspan="11" class="empty">กดปุ่ม "+ เพิ่มสินค้า"</td></tr>';
+    return;
+  }
+  tbody.innerHTML = visible.map((r, vi) => {
+    const idx = rows.indexOf(r);
+    return `<tr>
+      <td><input class="td-input" data-field="name" type="text" placeholder="ชื่อสินค้า" value="${escHtml(r.name)}" oninput="updateRow(${idx},'name',this.value)"></td>
+      <td><input class="td-input" type="number" min="1" value="${r.qty}" oninput="updateRow(${idx},'qty',this.value)"></td>
+      <td><input class="td-input" type="number" min="0" step="0.01" value="${r.price_cny}" oninput="updateRow(${idx},'price_cny',this.value)"></td>
+      <td><input class="td-input" type="number" min="0" step="0.001" value="${r.rate}" oninput="updateRow(${idx},'rate',this.value)"></td>
+      <td class="calc-val red" id="cs-${idx}">฿0</td>
+      <td class="calc-val orange" id="sa-${idx}">฿0</td>
+      <td class="calc-val red" id="cpu-${idx}">฿0</td>
+      <td><input class="td-input" type="number" min="0" step="0.01" value="${r.sell_price}" oninput="updateRow(${idx},'sell_price',this.value)"></td>
+      <td class="calc-val" id="pu-${idx}">฿0</td>
+      <td class="calc-val" id="pt-${idx}">฿0</td>
+      <td><button class="btn-del" onclick="deleteRowLocal(${idx})">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+function fmt(n) { return n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
+function recalc() {
+  const shipping = parseFloat(document.getElementById('d-shipping').value) || 0;
+  const extra = parseFloat(document.getElementById('d-extra').value) || 0;
+  const totalExtra = shipping + extra;
+
+  const visible = rows.filter(r => !r._deleted);
+  const totalGoods = visible.reduce((s, r) => s + r.qty * r.price_cny * r.rate, 0);
+
+  let totalCost = 0, totalSell = 0, totalQty = 0;
+
+  visible.forEach(r => {
+    const idx = rows.indexOf(r);
+    const sub = r.qty * r.price_cny * r.rate;
+    const shipAlloc = totalGoods > 0 ? (sub / totalGoods) * totalExtra : 0;
+    const costPerUnit = r.qty > 0 ? (sub + shipAlloc) / r.qty : 0;
+    const profitUnit = r.sell_price - costPerUnit;
+    const profitTotal = profitUnit * r.qty;
+    totalCost += sub + shipAlloc;
+    totalSell += r.sell_price * r.qty;
+    totalQty += r.qty;
+
+    const g = id => document.getElementById(id);
+    if (g(`cs-${idx}`)) {
+      g(`cs-${idx}`).textContent = '฿' + fmt(sub);
+      g(`sa-${idx}`).textContent = '฿' + fmt(shipAlloc);
+      g(`cpu-${idx}`).textContent = '฿' + fmt(costPerUnit);
+      const pu = g(`pu-${idx}`);
+      pu.textContent = '฿' + fmt(profitUnit);
+      pu.className = 'calc-val ' + (profitUnit >= 0 ? 'green' : 'red');
+      const pt = g(`pt-${idx}`);
+      pt.textContent = '฿' + fmt(profitTotal);
+      pt.className = 'calc-val ' + (profitTotal >= 0 ? 'green' : 'red');
+    }
+  });
+
+  const profit = totalSell - totalCost;
+  const margin = totalSell > 0 ? (profit / totalSell) * 100 : 0;
+
+  document.getElementById('s-items').textContent = visible.length;
+  document.getElementById('s-qty').textContent = totalQty.toLocaleString();
+  document.getElementById('s-cost').textContent = '฿' + fmt(totalGoods);
+  document.getElementById('s-ship').textContent = '฿' + fmt(totalExtra);
+  document.getElementById('s-total').textContent = '฿' + fmt(totalCost);
+  document.getElementById('s-sell').textContent = '฿' + fmt(totalSell);
+  const sp = document.getElementById('s-profit');
+  sp.textContent = '฿' + fmt(profit);
+  sp.style.color = profit >= 0 ? '#276749' : '#c53030';
+  const sm = document.getElementById('s-margin');
+  sm.textContent = fmt(margin) + '%';
+  sm.style.color = margin >= 0 ? '#276749' : '#c53030';
+}
+
+// ─── SAVE ─────────────────────────────────────────
+async function saveAll() {
+  const btn = document.querySelector('.btn-save');
+  btn.textContent = '⏳ กำลังบันทึก...';
+  btn.disabled = true;
+
+  // Update import header
+  await sb.from('imports').update({
+    shipping_cost: parseFloat(document.getElementById('d-shipping').value) || 0,
+    extra_cost: parseFloat(document.getElementById('d-extra').value) || 0,
+  }).eq('id', currentImport.id);
+
+  // Delete removed rows
+  const deleted = rows.filter(r => r._deleted && r.id);
+  if (deleted.length) await sb.from('import_items').delete().in('id', deleted.map(r => r.id));
+
+  // Upsert dirty rows
+  const toUpsert = rows.filter(r => !r._deleted && r._dirty).map(r => ({
+    ...(r.id ? { id: r.id } : {}),
+    import_id: currentImport.id,
+    name: r.name,
+    qty: r.qty,
+    price_cny: r.price_cny,
+    rate: r.rate,
+    sell_price: r.sell_price,
+  }));
+
+  if (toUpsert.length) {
+    const { data, error } = await sb.from('import_items').upsert(toUpsert).select();
+    if (!error && data) {
+      // Update local ids
+      data.forEach(saved => {
+        const local = rows.find(r => r.name === saved.name && !r.id);
+        if (local) local.id = saved.id;
+      });
+    }
+  }
+
+  rows = rows.filter(r => !r._deleted);
+  rows.forEach(r => { r._dirty = false; r._new = false; });
+
+  btn.textContent = '💾 บันทึก';
+  btn.disabled = false;
+  toast('✅ บันทึกเรียบร้อย');
+}
+
+async function deleteImport() {
+  if (!confirm(`ลบรอบ "${currentImport.name}" ทั้งหมด? ข้อมูลจะหายถาวร`)) return;
+  await sb.from('imports').delete().eq('id', currentImport.id);
+  toast('ลบแล้ว');
+  showList();
+}
+
+// ─── INIT ─────────────────────────────────────────
+loadList();
+document.getElementById('header-date').textContent = new Date().toLocaleDateString('th-TH');
+</script>
+</body>
+</html>
