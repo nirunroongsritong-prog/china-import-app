@@ -921,15 +921,11 @@ async function loadSalesPage() {
   // โหลดข้อมูล
   let r1, r2, r3;
   try {
-    const tout = new Promise((_,rj) => setTimeout(() => rj(new Error('หมดเวลา 8 วิ')), 8000));
-    [r1, r2, r3] = await Promise.race([
-      Promise.all([
-        sb.from('imports').select('id,name,shipping_cost,extra_cost'),
-        sb.from('import_items').select('*').order('name'),
-        sb.from('sales').select('*').order('sold_at',{ascending:false})
-      ]),
-      tout
+    [r1, r2] = await Promise.all([
+      sb.from('imports').select('id,name,shipping_cost,extra_cost'),
+      sb.from('import_items').select('*').order('name'),
     ]);
+    r3 = { data: [], error: null };
   } catch(e) {
     document.getElementById('s2-products').innerHTML = '<div class="empty" style="color:#c53030">❌ ' + e.message + '</div>';
     document.getElementById('s2-history').innerHTML = '';
@@ -1372,15 +1368,16 @@ async function initApp() {
 }
 
 // ─── INIT ─────────────────────────────────────────
-// Auto-load sales page when it becomes active
+// Auto-load sales page when tab is switched
 let s2Loading = false;
 new MutationObserver(() => {
+  if (currentTab !== 'sales') return;
   const pg = document.getElementById('page-sales');
   if (pg && pg.classList.contains('active') && !s2Loading) {
     s2Loading = true;
     loadSalesPage().finally(() => { s2Loading = false; });
   }
-}).observe(document.body, { attributes: true, subtree: true, attributeFilter: ['class'] });
+}).observe(document.getElementById('page-sales'), { attributes: true, attributeFilter: ['class'] });
 
 initApp();
 </script>
