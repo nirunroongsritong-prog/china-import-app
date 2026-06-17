@@ -451,23 +451,23 @@ body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #2d3748;
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
       <div class="mini-field">
         <label>จำนวนที่ขาย (ชิ้น)</label>
-        <input class="mini-input" type="number" id="sm-qty" min="1" value="1" oninput="calcSaleProfit()">
+        <input class="mini-input" type="number" id="sm-qty" min="1" value="1" oninput="calcSaleProfit(true)">
       </div>
       <div class="mini-field">
         <label>ราคาขาย/ชิ้น (฿)</label>
-        <input class="mini-input" type="number" id="sm-price" min="0" step="0.01" value="0" oninput="calcSaleProfit()">
+        <input class="mini-input" type="number" id="sm-price" min="0" step="0.01" value="0" oninput="calcSaleProfit(true)">
       </div>
       <div class="mini-field">
         <label>ค่าส่งลูกค้า (฿)</label>
-        <input class="mini-input" type="number" id="sm-ship" min="0" step="0.01" value="0" oninput="calcSaleProfit()">
+        <input class="mini-input" type="number" id="sm-ship" min="0" step="0.01" value="0" oninput="calcSaleProfit(true)">
       </div>
       <div class="mini-field">
         <label>ค่ากล่อง (฿)</label>
-        <input class="mini-input" type="number" id="sm-box" min="0" step="0.01" value="0" oninput="calcSaleProfit()">
+        <input class="mini-input" type="number" id="sm-box" min="0" step="0.01" value="0" oninput="calcSaleProfit(true)">
       </div>
       <div class="mini-field">
         <label>ส่วนลด (฿)</label>
-        <input class="mini-input" type="number" id="sm-discount" min="0" step="0.01" value="0" oninput="calcSaleProfit()">
+        <input class="mini-input" type="number" id="sm-discount" min="0" step="0.01" value="0" oninput="calcSaleProfit(true)">
       </div>
       <div class="mini-field">
         <label>หมายเหตุ</label>
@@ -486,9 +486,10 @@ body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #2d3748;
       </div>
     </div>
 
-    <div style="display:flex;align-items:center;justify-content:space-between">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
       <button class="btn-cancel" onclick="closeSaleModal()">ปิด</button>
-      <div id="sm-status" style="font-size:0.8rem;color:#a0aec0">— กรอกข้อมูลแล้วบันทึกอัตโนมัติ —</div>
+      <div id="sm-status" style="font-size:0.8rem;color:#a0aec0;flex:1;text-align:center"></div>
+      <button class="btn-primary" onclick="saveSale()">💾 บันทึก</button>
     </div>
   </div>
 </div>
@@ -1061,6 +1062,8 @@ function s2OpenModal(idx) {
   document.getElementById('sm-box').value = 0;
   document.getElementById('sm-discount').value = 0;
   document.getElementById('sm-note').value = '';
+  s2UserTyped = false;
+  clearTimeout(s2SaveTimer);
   calcSaleProfit();
   document.getElementById('sale-modal').classList.add('open');
   setTimeout(()=>document.getElementById('sm-qty').focus(),150);
@@ -1072,7 +1075,9 @@ function closeSaleModal() {
   clearTimeout(s2SaveTimer);
 }
 
-function calcSaleProfit() {
+let s2UserTyped = false;
+
+function calcSaleProfit(fromUser) {
   if (!s2CurrentItem) return;
   const cost = s2CostMap[s2CurrentItem.id]||0;
   const qty = parseFloat(document.getElementById('sm-qty').value)||0;
@@ -1089,11 +1094,7 @@ function calcSaleProfit() {
   const sp = document.getElementById('sp-profit');
   sp.textContent = '฿'+fmt(profit);
   sp.style.color = profit>=0?'#276749':'#c53030';
-  if (qty>0 && price>0) {
-    document.getElementById('sm-status').textContent = '⏳ กำลังจะบันทึก...';
-    clearTimeout(s2SaveTimer);
-    s2SaveTimer = setTimeout(saveSale, 1500);
-  }
+  if (fromUser) { s2UserTyped = true; }
 }
 
 async function saveSale() {
