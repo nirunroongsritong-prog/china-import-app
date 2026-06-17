@@ -917,18 +917,29 @@ let s2SaveTimer = null;
 async function loadSalesPage() {
   const elProd = document.getElementById('s2-products');
   const elHist = document.getElementById('s2-history');
-  if (!elProd) return;
+  if (!elProd || !elHist) { console.error('s2 elements not found'); return; }
+  try {
   elProd.innerHTML = '<div class="loading"><div class="spin"></div></div>';
   elHist.innerHTML = '<div class="loading"><div class="spin"></div></div>';
   document.getElementById('s2-date').textContent = new Date().toLocaleDateString('th-TH', {weekday:'long',day:'numeric',month:'long',year:'numeric'});
 
   // โหลดข้อมูล
-  const r1 = await sb.from('imports').select('id,name,shipping_cost,extra_cost');
-  const r2 = await sb.from('import_items').select('*').order('name');
-  const r3 = await sb.from('sales').select('*').order('sold_at',{ascending:false});
+  let r1, r2, r3;
+  try {
+    [r1, r2, r3] = await Promise.all([
+      sb.from('imports').select('id,name,shipping_cost,extra_cost'),
+      sb.from('import_items').select('*').order('name'),
+      sb.from('sales').select('*').order('sold_at',{ascending:false})
+    ]);
+  } catch(e) {
+    elProd.innerHTML = '<div class="empty" style="color:#c53030">❌ เชื่อมต่อ Supabase ไม่ได้: ' + e.message + '</div>';
+    elHist.innerHTML = '';
+    return;
+  }
 
   if (r1.error || r2.error) {
-    elProd.innerHTML = '<div class="empty" style="color:#c53030">โหลดข้อมูลไม่ได้ กรุณารีเฟรช</div>';
+    elProd.innerHTML = '<div class="empty" style="color:#c53030">❌ ' + (r1.error||r2.error).message + '</div>';
+    elHist.innerHTML = '';
     return;
   }
 
@@ -1030,6 +1041,10 @@ async function loadSalesPage() {
         + '</div>';
     });
     elHist.innerHTML = hhtml;
+  }
+  } catch(e) {
+    elProd.innerHTML = '<div class="empty" style="color:#c53030">❌ Error: ' + (e.message||String(e)) + '</div>';
+    elHist.innerHTML = '';
   }
 }
 
