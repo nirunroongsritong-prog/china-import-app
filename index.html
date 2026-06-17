@@ -1063,7 +1063,10 @@ async function loadSalesPage() {
     todaySales.forEach(s => {
       const item = itemMap[s.item_id] || {};
       const rev = s.sell_price * s.qty_sold;
-      const tc = (s2CostMap[s.item_id]||0)*s.qty_sold + (s.ship_cost||0) + (s.box_cost||0) - (s.discount||0);
+      const flashD = s.sell_price * (s.tiktok_flashsale||0) / 100;
+      const base = s.sell_price - flashD;
+      const comm = (flashD + base*(s.tiktok_commission||0)/100 + base*(s.inf_commission||0)/100) * s.qty_sold;
+      const tc = (s2CostMap[s.item_id]||0)*s.qty_sold + (s.ship_cost||0) + (s.box_cost||0) - (s.discount||0) + comm;
       const profit = rev - tc;
       const time = new Date(s.sold_at).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
       const img2 = item.image_url
