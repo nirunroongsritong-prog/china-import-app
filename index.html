@@ -415,7 +415,7 @@ body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #2d3748;
     <span class="nav-icon">📦</span>
     <span class="nav-label">คลัง</span>
   </button>
-  <button class="nav-btn" id="nav-sales" onclick="switchTab('sales')">
+  <button class="nav-btn" id="nav-sales" onclick="switchTab('sales');loadSalesPage();">
     <span class="nav-icon">🛒</span>
     <span class="nav-label">ขาย</span>
   </button>
@@ -537,7 +537,7 @@ function switchTab(tab) {
     document.getElementById('header-title').textContent = '🛒 บันทึกการขาย';
     document.getElementById('btn-back-wrap').style.display = 'none';
     document.getElementById('header-sub').textContent = '';
-    setTimeout(() => loadSalesPage(), 50);
+    loadSalesPage();
   } else if (tab === 'summary') {
     document.getElementById('page-summary').classList.add('active');
     document.getElementById('nav-summary').classList.add('active');
