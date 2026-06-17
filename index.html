@@ -1253,7 +1253,13 @@ function renderSummary() {
 
   // ยอดรวม
   const revenue = filtered.reduce((s, x) => s + x.sell_price * x.qty_sold, 0);
-  const cost = filtered.reduce((s, x) => (summaryItemCostMap[x.item_id] || 0) * x.qty_sold + x.ship_cost + x.box_cost - x.discount + s, 0);
+  const cost = filtered.reduce((s, x) => {
+    const costUnit = summaryItemCostMap[x.item_id] || 0;
+    const flashD = x.sell_price * (x.tiktok_flashsale||0) / 100;
+    const base = x.sell_price - flashD;
+    const comm = (flashD + base*(x.tiktok_commission||0)/100 + base*(x.inf_commission||0)/100) * x.qty_sold;
+    return s + costUnit*x.qty_sold + (x.ship_cost||0) + (x.box_cost||0) - (x.discount||0) + comm;
+  }, 0);
   const profit = revenue - cost;
   const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
 
@@ -1289,9 +1295,12 @@ function renderSummary() {
   filtered.forEach(s => {
     if (!productStats[s.item_id]) productStats[s.item_id] = { qtySold: 0, revenue: 0, cost: 0 };
     const costUnit = summaryItemCostMap[s.item_id] || 0;
+    const flashD = s.sell_price * (s.tiktok_flashsale||0) / 100;
+    const base = s.sell_price - flashD;
+    const comm = (flashD + base*(s.tiktok_commission||0)/100 + base*(s.inf_commission||0)/100) * s.qty_sold;
     productStats[s.item_id].qtySold += s.qty_sold;
     productStats[s.item_id].revenue += s.sell_price * s.qty_sold;
-    productStats[s.item_id].cost += (costUnit * s.qty_sold) + s.ship_cost + s.box_cost - s.discount;
+    productStats[s.item_id].cost += (costUnit * s.qty_sold) + (s.ship_cost||0) + (s.box_cost||0) - (s.discount||0) + comm;
   });
 
   const sorted = Object.entries(productStats).sort((a, b) => (b[1].revenue - b[1].cost) - (a[1].revenue - a[1].cost));
@@ -1337,7 +1346,10 @@ function renderMonthlyChart() {
     const m = d.getMonth();
     const costUnit = summaryItemCostMap[s.item_id] || 0;
     const rev = s.sell_price * s.qty_sold;
-    const cost = (costUnit * s.qty_sold) + s.ship_cost + s.box_cost - s.discount;
+    const flashD = s.sell_price * (s.tiktok_flashsale||0) / 100;
+    const base = s.sell_price - flashD;
+    const comm = (flashD + base*(s.tiktok_commission||0)/100 + base*(s.inf_commission||0)/100) * s.qty_sold;
+    const cost = (costUnit * s.qty_sold) + (s.ship_cost||0) + (s.box_cost||0) - (s.discount||0) + comm;
     revenueByMonth[m] += rev;
     costByMonth[m] += cost;
     profitByMonth[m] += rev - cost;
