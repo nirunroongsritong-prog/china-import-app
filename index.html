@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>นำเข้าสินค้าจีน</title>
+<title>PapaPlay</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <style>
@@ -204,6 +204,14 @@ body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #2d3748;
 .page { display: none; }
 .page.active { display: block; }
 
+.pin-btn {
+  padding: 16px; font-size: 1.3rem; font-weight: 700;
+  border: 2px solid #e2e8f0; border-radius: 12px;
+  background: white; cursor: pointer; color: #2d3748;
+  transition: all 0.1s; user-select: none;
+}
+.pin-btn:active { background: #e53e3e; color: white; border-color: #e53e3e; transform: scale(0.93); }
+
 .period-btn {
   flex-shrink: 0; padding: 7px 14px; border: 2px solid #e2e8f0;
   border-radius: 20px; background: white; font-size: 0.82rem;
@@ -214,6 +222,40 @@ body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #2d3748;
 </style>
 </head>
 <body>
+
+<!-- Lock Screen -->
+<div id="lockscreen" style="position:fixed;inset:0;background:linear-gradient(135deg,#e53e3e,#c53030);z-index:999;display:flex;align-items:center;justify-content:center;padding:20px">
+  <div style="background:white;border-radius:20px;padding:28px 24px;width:100%;max-width:300px;text-align:center">
+    <div style="font-size:2.2rem;margin-bottom:6px">🔐</div>
+    <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:4px">PapaPlay</h2>
+    <p style="font-size:0.82rem;color:#718096;margin-bottom:20px">กรอกรหัส 4 หลัก</p>
+
+    <!-- PIN dots -->
+    <div style="display:flex;justify-content:center;gap:14px;margin-bottom:24px">
+      <div id="dot-0" style="width:16px;height:16px;border-radius:50%;border:2px solid #cbd5e0;background:white;transition:background 0.15s"></div>
+      <div id="dot-1" style="width:16px;height:16px;border-radius:50%;border:2px solid #cbd5e0;background:white;transition:background 0.15s"></div>
+      <div id="dot-2" style="width:16px;height:16px;border-radius:50%;border:2px solid #cbd5e0;background:white;transition:background 0.15s"></div>
+      <div id="dot-3" style="width:16px;height:16px;border-radius:50%;border:2px solid #cbd5e0;background:white;transition:background 0.15s"></div>
+    </div>
+
+    <!-- Keypad -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px">
+      <button class="pin-btn" onclick="pinPress('1')">1</button>
+      <button class="pin-btn" onclick="pinPress('2')">2</button>
+      <button class="pin-btn" onclick="pinPress('3')">3</button>
+      <button class="pin-btn" onclick="pinPress('4')">4</button>
+      <button class="pin-btn" onclick="pinPress('5')">5</button>
+      <button class="pin-btn" onclick="pinPress('6')">6</button>
+      <button class="pin-btn" onclick="pinPress('7')">7</button>
+      <button class="pin-btn" onclick="pinPress('8')">8</button>
+      <button class="pin-btn" onclick="pinPress('9')">9</button>
+      <div></div>
+      <button class="pin-btn" onclick="pinPress('0')">0</button>
+      <button class="pin-btn" onclick="pinDel()" style="font-size:1.2rem">⌫</button>
+    </div>
+    <div id="pin-error" style="color:#c53030;font-size:0.82rem;margin-top:8px;display:none">รหัสไม่ถูกต้อง</div>
+  </div>
+</div>
 
 <div class="header">
   <div class="header-left">
@@ -1239,8 +1281,67 @@ function renderMonthlyChart() {
   });
 }
 
+// ─── PIN GATE ─────────────────────────────────────
+const PIN = '2673';
+let pinVal = '';
+
+function pinPress(num) {
+  if (pinVal.length >= 4) return;
+  pinVal += num;
+  updateDots();
+  if (pinVal.length === 4) setTimeout(checkPin, 150);
+}
+
+function pinDel() {
+  pinVal = pinVal.slice(0, -1);
+  updateDots();
+  document.getElementById('pin-error').style.display = 'none';
+}
+
+function updateDots() {
+  for (let i = 0; i < 4; i++) {
+    const dot = document.getElementById('dot-' + i);
+    if (!dot) return;
+    dot.style.background = i < pinVal.length ? '#e53e3e' : 'white';
+    dot.style.borderColor = i < pinVal.length ? '#e53e3e' : '#cbd5e0';
+  }
+}
+
+async function checkPin() {
+  if (pinVal === PIN) {
+    sessionStorage.setItem('auth', '1');
+    const ls = document.getElementById('lockscreen');
+    ls.innerHTML = '<div style="color:white;font-size:1.1rem;font-weight:700">⏳ กำลังโหลด...</div>';
+    try {
+      await loadList();
+      ls.remove();
+    } catch(e) {
+      ls.innerHTML = '<div style="color:white;padding:20px;text-align:center"><b>โหลดไม่ได้</b><br><small>' + e.message + '</small><br><br><button onclick="location.reload()" style="padding:10px 20px;border:none;border-radius:8px;cursor:pointer">ลองใหม่</button></div>';
+    }
+  } else {
+    document.getElementById('pin-error').style.display = 'block';
+    pinVal = '';
+    updateDots();
+  }
+}
+
+async function initApp() {
+  if (sessionStorage.getItem('auth') === '1') {
+    const ls = document.getElementById('lockscreen');
+    ls.innerHTML = '<div style="color:white;font-size:1.1rem;font-weight:700">⏳ กำลังโหลด...</div>';
+    try {
+      await loadList();
+      ls.remove();
+    } catch(e) {
+      ls.innerHTML = '<div style="color:white;padding:20px;text-align:center"><b>โหลดไม่ได้</b><br><button onclick="location.reload()" style="padding:10px 20px;border:none;border-radius:8px;cursor:pointer;margin-top:10px">ลองใหม่</button></div>';
+    }
+  } else {
+    document.getElementById('lockscreen').style.display = 'flex';
+  }
+}
+
 // ─── INIT ─────────────────────────────────────────
-loadList();
+initApp();
 </script>
 </body>
 </html>
