@@ -415,7 +415,7 @@ body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #2d3748;
     <span class="nav-icon">📦</span>
     <span class="nav-label">คลัง</span>
   </button>
-  <button class="nav-btn" id="nav-sales" onclick="switchTab('sales');loadSalesPage();">
+  <button class="nav-btn" id="nav-sales" onclick="switchTab('sales')">
     <span class="nav-icon">🛒</span>
     <span class="nav-label">ขาย</span>
   </button>
@@ -913,16 +913,10 @@ let s2CurrentItem = null;
 let s2SaveTimer = null;
 
 async function loadSalesPage() {
-  const elProd = document.getElementById('s2-products');
-  const elHist = document.getElementById('s2-history');
-  if (!elProd) { alert('ERROR: s2-products not found'); return; }
-  if (!elHist) { alert('ERROR: s2-history not found'); return; }
-  elProd.innerHTML = '<div class="empty">กำลังโหลด...</div>';
-  elHist.innerHTML = '<div class="empty">กำลังโหลด...</div>';
-  try {
-  elProd.innerHTML = '<div class="loading"><div class="spin"></div></div>';
-  elHist.innerHTML = '<div class="loading"><div class="spin"></div></div>';
+  document.getElementById('s2-products').innerHTML = '<div class="loading"><div class="spin"></div></div>';
+  document.getElementById('s2-history').innerHTML = '<div class="loading"><div class="spin"></div></div>';
   document.getElementById('s2-date').textContent = new Date().toLocaleDateString('th-TH', {weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  try {
 
   // โหลดข้อมูล
   let r1, r2, r3;
