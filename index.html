@@ -819,8 +819,11 @@ function recalc() {
     const shipAlloc = totalGoods > 0 ? (sub / totalGoods) * totalExtra : 0;
     const shipPerUnit = r.qty > 0 ? shipAlloc / r.qty : 0;
     const costPerUnit = goodsPerUnit + shipPerUnit;
-    const commissionRate = ((r.tiktok_commission||0) + (r.inf_commission||0) + (r.tiktok_flashsale||0)) / 100;
-    const commissionPerUnit = r.sell_price * commissionRate;
+    const flashsaleDeduct = r.sell_price * (r.tiktok_flashsale||0) / 100;
+    const basePrice = r.sell_price - flashsaleDeduct;
+    const tiktokFee = basePrice * (r.tiktok_commission||0) / 100;
+    const infFee = basePrice * (r.inf_commission||0) / 100;
+    const commissionPerUnit = flashsaleDeduct + tiktokFee + infFee;
     const profitUnit = r.sell_price - costPerUnit - commissionPerUnit;
     const profitTotal = profitUnit * r.qty;
 
