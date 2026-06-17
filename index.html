@@ -361,10 +361,10 @@ body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #2d3748;
 
     <!-- Period filter -->
     <div style="display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;padding-bottom:2px">
-      <button class="period-btn active" onclick="setPeriod('today')">วันนี้</button>
+      <button class="period-btn" onclick="setPeriod('today')">วันนี้</button>
       <button class="period-btn" onclick="setPeriod('week')">สัปดาห์นี้</button>
       <button class="period-btn" onclick="setPeriod('month')">เดือนนี้</button>
-      <button class="period-btn" onclick="setPeriod('all')">ทั้งหมด</button>
+      <button class="period-btn active" onclick="setPeriod('all')">ทั้งหมด</button>
     </div>
 
     <!-- Overview -->
@@ -1187,7 +1187,7 @@ async function s2DelSale(id) {
 }
 
 // ─── SUMMARY PAGE ─────────────────────────────────
-let currentPeriod = 'today';
+let currentPeriod = 'all';
 let currentChartYear = new Date().getFullYear();
 let monthlyChart = null;
 let summaryAllSales = [];
