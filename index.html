@@ -918,9 +918,14 @@ async function loadSalesPage() {
   document.getElementById('sale-date-label').textContent = new Date().toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
   // โหลดสินค้า + imports
-  const { data: imports } = await sb.from('imports').select('id,name,shipping_cost,extra_cost');
-  const { data: items } = await sb.from('import_items').select('*').order('created_at');
+  const { data: imports, error: impErr } = await sb.from('imports').select('id,name,shipping_cost,extra_cost');
+  if (impErr) throw new Error('โหลด imports ไม่ได้: ' + impErr.message);
+
+  const { data: items, error: itemErr } = await sb.from('import_items').select('*').order('created_at');
+  if (itemErr) throw new Error('โหลด import_items ไม่ได้: ' + itemErr.message);
+
   allItems = items || [];
+  document.getElementById('sale-products').innerHTML = `<div style="padding:8px;color:#888;font-size:0.8rem">debug: โหลดได้ ${allItems.length} รายการ</div>`;
 
   // คำนวณต้นทุน/ชิ้น
   const importMap = {};
