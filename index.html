@@ -959,7 +959,7 @@ async function loadSalesPage() {
 
   // render การ์ดสินค้า
   if (!allItems.length) {
-    document.getElementById('sale-products').innerHTML = '<div class="empty">ยังไม่มีสินค้าในคลัง<br>ไปเพิ่มที่แถบ "คลัง" ก่อน</div>';
+    document.getElementById('sale-products').innerHTML = '<div class="empty">⚠️ ไม่พบสินค้าในฐานข้อมูล<br>ลองกลับไปหน้าคลังแล้วสร้างสินค้าก่อนครับ</div>';
   } else {
     document.getElementById('sale-products').innerHTML = allItems.map(item => {
       const remaining = item.qty - (soldMap[item.id] || 0);
@@ -1026,7 +1026,8 @@ async function loadSalesPage() {
     }).join('');
   }
   } catch(e) {
-    document.getElementById('sale-products').innerHTML = `<div class="empty" style="color:#c53030">โหลดไม่ได้: ${e.message}</div>`;
+    document.getElementById('sale-products').innerHTML = `<div class="empty" style="color:#c53030">❌ Error: ${e.message || String(e)}</div>`;
+    document.getElementById('sales-history').innerHTML = '';
   }
 }
 
