@@ -310,6 +310,7 @@ body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #2d3748;
       <div class="summary-grid">
         <div class="s-box blue"><div class="lbl">รายการ</div><div class="val" id="s-items">0</div></div>
         <div class="s-box blue"><div class="lbl">ชิ้นทั้งหมด</div><div class="val" id="s-qty">0</div></div>
+        <div class="s-box blue"><div class="lbl">รวมทั้งหมด (หยวน)</div><div class="val" id="s-cny">¥0</div></div>
         <div class="s-box red"><div class="lbl">ต้นทุนสินค้า</div><div class="val" id="s-cost">฿0</div></div>
         <div class="s-box orange"><div class="lbl">ค่าขนส่ง+ค่าธรรมเนียม</div><div class="val" id="s-ship">฿0</div></div>
         <div class="s-box red"><div class="lbl">ต้นทุนรวม</div><div class="val" id="s-total">฿0</div></div>
@@ -709,6 +710,10 @@ function renderItems() {
             oninput="updateRow(${idx},'rate',this.value)">
         </div>
         <div class="mini-field">
+          <label>ราคา (หยวน) รวม</label>
+          <div class="mini-calc" id="c-cny-${idx}" style="color:#2b6cb0;background:#ebf8ff">¥0.00</div>
+        </div>
+        <div class="mini-field">
           <label>ต้นทุนสินค้า/ชิ้น (฿)</label>
           <div class="mini-calc red" id="c-goods-${idx}">฿0.00</div>
         </div>
@@ -784,7 +789,7 @@ function recalc() {
   const visible = rows.filter(r => !r._deleted);
   const totalGoods = visible.reduce((s, r) => s + r.qty * r.price_cny * r.rate, 0);
 
-  let totCost = 0, totSell = 0, totQty = 0;
+  let totCost = 0, totSell = 0, totQty = 0, totCny = 0;
 
   visible.forEach(r => {
     const idx = rows.indexOf(r);
@@ -799,9 +804,11 @@ function recalc() {
     totCost += sub + shipAlloc;
     totSell += r.sell_price * r.qty;
     totQty += r.qty;
+    totCny += r.qty * r.price_cny;
 
     const g = id => document.getElementById(id);
     if (g(`c-goods-${idx}`)) {
+      g(`c-cny-${idx}`).textContent = '¥' + fmt(r.qty * r.price_cny);
       g(`c-goods-${idx}`).textContent = '฿' + fmt(goodsPerUnit);
       g(`c-ship-${idx}`).textContent = '฿' + fmt(shipPerUnit);
       g(`c-cost-${idx}`).textContent = '฿' + fmt(costPerUnit);
@@ -818,6 +825,7 @@ function recalc() {
   const margin = totSell > 0 ? (profit / totSell) * 100 : 0;
   document.getElementById('s-items').textContent = visible.length;
   document.getElementById('s-qty').textContent = totQty.toLocaleString();
+  document.getElementById('s-cny').textContent = '¥' + fmt(totCny);
   document.getElementById('s-cost').textContent = '฿' + fmt(totalGoods);
   document.getElementById('s-ship').textContent = '฿' + fmt(totalExtra);
   document.getElementById('s-total').textContent = '฿' + fmt(totCost);
