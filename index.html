@@ -748,6 +748,10 @@ function renderItems() {
             oninput="updateRow(${idx},'tiktok_flashsale',this.value)">
         </div>
         <div class="mini-field">
+          <label>Commission/ชิ้น (฿)</label>
+          <div class="mini-calc orange" id="c-cm-${idx}">฿0.00</div>
+        </div>
+        <div class="mini-field">
           <label>กำไร/ชิ้น (฿)</label>
           <div class="mini-calc" id="c-pu-${idx}">฿0.00</div>
         </div>
@@ -815,7 +819,9 @@ function recalc() {
     const shipAlloc = totalGoods > 0 ? (sub / totalGoods) * totalExtra : 0;
     const shipPerUnit = r.qty > 0 ? shipAlloc / r.qty : 0;
     const costPerUnit = goodsPerUnit + shipPerUnit;
-    const profitUnit = r.sell_price - costPerUnit;
+    const commissionRate = ((r.tiktok_commission||0) + (r.inf_commission||0) + (r.tiktok_flashsale||0)) / 100;
+    const commissionPerUnit = r.sell_price * commissionRate;
+    const profitUnit = r.sell_price - costPerUnit - commissionPerUnit;
     const profitTotal = profitUnit * r.qty;
 
     totCost += sub + shipAlloc;
@@ -829,6 +835,7 @@ function recalc() {
       g(`c-goods-${idx}`).textContent = '฿' + fmt(goodsPerUnit);
       g(`c-ship-${idx}`).textContent = '฿' + fmt(shipPerUnit);
       g(`c-cost-${idx}`).textContent = '฿' + fmt(costPerUnit);
+      if (g(`c-cm-${idx}`)) g(`c-cm-${idx}`).textContent = '฿' + fmt(commissionPerUnit);
       const pu = g(`c-pu-${idx}`);
       pu.textContent = '฿' + fmt(profitUnit);
       pu.className = 'mini-calc ' + (profitUnit >= 0 ? 'green' : 'red');
