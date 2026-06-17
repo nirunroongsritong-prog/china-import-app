@@ -539,7 +539,7 @@ function switchTab(tab) {
     document.getElementById('header-title').textContent = '🛒 บันทึกการขาย';
     document.getElementById('btn-back-wrap').style.display = 'none';
     document.getElementById('header-sub').textContent = '';
-    loadSalesPage();
+    try { loadSalesPage(); } catch(ex) { document.getElementById('s2-products').innerHTML = '<div class="empty" style="color:red">switchTab error: '+ex.message+'</div>'; }
   } else if (tab === 'summary') {
     document.getElementById('page-summary').classList.add('active');
     document.getElementById('nav-summary').classList.add('active');
@@ -917,7 +917,10 @@ let s2SaveTimer = null;
 async function loadSalesPage() {
   const elProd = document.getElementById('s2-products');
   const elHist = document.getElementById('s2-history');
-  if (!elProd || !elHist) { console.error('s2 elements not found'); return; }
+  if (!elProd) { alert('ERROR: s2-products not found'); return; }
+  if (!elHist) { alert('ERROR: s2-history not found'); return; }
+  elProd.innerHTML = '<div class="empty">กำลังโหลด...</div>';
+  elHist.innerHTML = '<div class="empty">กำลังโหลด...</div>';
   try {
   elProd.innerHTML = '<div class="loading"><div class="spin"></div></div>';
   elHist.innerHTML = '<div class="loading"><div class="spin"></div></div>';
