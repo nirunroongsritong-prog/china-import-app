@@ -630,6 +630,7 @@ function addRow() {
   rows.push({
     id: null, import_id: currentImport.id,
     name: '', qty: 1, price_cny: 0, rate: 4.9, sell_price: 0, image_url: null,
+    tiktok_commission: 0, inf_commission: 0, tiktok_flashsale: 0,
     _dirty: true, _new: true
   });
   renderItems();
@@ -730,6 +731,21 @@ function renderItems() {
           <label>ราคาขาย/ชิ้น (฿)</label>
           <input class="mini-input" type="number" min="0" step="0.01" value="${r.sell_price}"
             oninput="updateRow(${idx},'sell_price',this.value)">
+        </div>
+        <div class="mini-field">
+          <label>TikTok Commission (%)</label>
+          <input class="mini-input" type="number" min="0" max="100" step="0.1" value="${r.tiktok_commission||0}"
+            oninput="updateRow(${idx},'tiktok_commission',this.value)">
+        </div>
+        <div class="mini-field">
+          <label>Influencer Commission (%)</label>
+          <input class="mini-input" type="number" min="0" max="100" step="0.1" value="${r.inf_commission||0}"
+            oninput="updateRow(${idx},'inf_commission',this.value)">
+        </div>
+        <div class="mini-field">
+          <label>TikTok Flashsale (%)</label>
+          <input class="mini-input" type="number" min="0" max="100" step="0.1" value="${r.tiktok_flashsale||0}"
+            oninput="updateRow(${idx},'tiktok_flashsale',this.value)">
         </div>
         <div class="mini-field">
           <label>กำไร/ชิ้น (฿)</label>
@@ -858,6 +874,7 @@ async function saveAll() {
     name: r.name, qty: r.qty,
     price_cny: r.price_cny, rate: r.rate,
     sell_price: r.sell_price, image_url: r.image_url || null,
+    tiktok_commission: r.tiktok_commission||0, inf_commission: r.inf_commission||0, tiktok_flashsale: r.tiktok_flashsale||0,
   }));
 
   if (toUpsert.length) {
