@@ -473,6 +473,22 @@ body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #2d3748;
         <label>หมายเหตุ</label>
         <input class="mini-input" type="text" id="sm-note" placeholder="เช่น ลูกค้า VIP">
       </div>
+      <div class="mini-field">
+        <label>TikTok Commission (%)</label>
+        <input class="mini-input" type="number" id="sm-tiktok" min="0" max="100" step="0.1" value="0" oninput="calcSaleProfit(true)">
+      </div>
+      <div class="mini-field">
+        <label>Influencer Commission (%)</label>
+        <input class="mini-input" type="number" id="sm-inf" min="0" max="100" step="0.1" value="0" oninput="calcSaleProfit(true)">
+      </div>
+      <div class="mini-field">
+        <label>TikTok Flashsale (%)</label>
+        <input class="mini-input" type="number" id="sm-flashsale" min="0" max="100" step="0.1" value="0" oninput="calcSaleProfit(true)">
+      </div>
+      <div class="mini-field">
+        <label>Commission/ชิ้น (฿)</label>
+        <div class="mini-calc orange" id="sp-commission">฿0.00</div>
+      </div>
     </div>
 
     <!-- preview กำไร -->
@@ -1089,6 +1105,9 @@ function s2OpenModal(idx) {
   document.getElementById('sm-box').value = 0;
   document.getElementById('sm-discount').value = 0;
   document.getElementById('sm-note').value = '';
+  document.getElementById('sm-tiktok').value = item.tiktok_commission||0;
+  document.getElementById('sm-inf').value = item.inf_commission||0;
+  document.getElementById('sm-flashsale').value = item.tiktok_flashsale||0;
   s2UserTyped = false;
   clearTimeout(s2SaveTimer);
   calcSaleProfit();
@@ -1112,9 +1131,20 @@ function calcSaleProfit(fromUser) {
   const ship = parseFloat(document.getElementById('sm-ship').value)||0;
   const box = parseFloat(document.getElementById('sm-box').value)||0;
   const disc = parseFloat(document.getElementById('sm-discount').value)||0;
-  const rev = price*qty;
-  const tc = cost*qty + ship + box - disc;
+  const tiktokPct = parseFloat(document.getElementById('sm-tiktok').value)||0;
+  const infPct = parseFloat(document.getElementById('sm-inf').value)||0;
+  const flashsalePct = parseFloat(document.getElementById('sm-flashsale').value)||0;
+  // สูตร commission: (ราคาขาย - ส่วนลด flashsale) × อัตราคอม
+  const flashsaleDeduct = price * flashsalePct / 100;
+  const basePrice = price - flashsaleDeduct;
+  const tiktokFee = basePrice * tiktokPct / 100;
+  const infFee = basePrice * infPct / 100;
+  const commPerUnit = flashsaleDeduct + tiktokFee + infFee;
+  const commTotal = commPerUnit * qty;
+  const rev = price * qty;
+  const tc = cost*qty + ship + box - disc + commTotal;
   const profit = rev - tc;
+  document.getElementById('sp-commission').textContent = '฿'+fmt(commPerUnit);
   document.getElementById('sp-cost').textContent = '฿'+fmt(cost);
   document.getElementById('sp-revenue').textContent = '฿'+fmt(rev);
   document.getElementById('sp-totalcost').textContent = '฿'+fmt(tc);
@@ -1140,6 +1170,9 @@ async function saveSale() {
     box_cost: parseFloat(document.getElementById('sm-box').value)||0,
     discount: parseFloat(document.getElementById('sm-discount').value)||0,
     note: document.getElementById('sm-note').value.trim(),
+    tiktok_commission: parseFloat(document.getElementById('sm-tiktok').value)||0,
+    inf_commission: parseFloat(document.getElementById('sm-inf').value)||0,
+    tiktok_flashsale: parseFloat(document.getElementById('sm-flashsale').value)||0,
   });
   if (error) { status.textContent = '❌ บันทึกไม่สำเร็จ'; status.style.color='#c53030'; return; }
   status.textContent = '✅ บันทึกแล้ว!'; status.style.color='#276749';
