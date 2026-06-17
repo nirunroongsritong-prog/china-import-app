@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>คำนวณต้นทุนสินค้าจีน</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f4f8; color: #2d3748; min-height: 100vh; }
+
+  .header {
+    background: linear-gradient(135deg, #e53e3e, #c53030);
+    color: white;
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  .header h1 { font-size: 1.4rem; font-weight: 700; }
+  .header span { font-size: 1.8rem; }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 20px 16px; }
+
+  .settings-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+  }
+  .settings-card h2 { grid-column: 1/-1; font-size: 1rem; color: #718096; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+
+  .field label { display: block; font-size: 0.8rem; color: #718096; margin-bottom: 4px; font-weight: 600; }
+  .field input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+    outline: none;
+  }
+  .field input:focus { border-color: #e53e3e; }
+  .field .unit { font-size: 0.75rem; color: #a0aec0; margin-top: 3px; }
+
+  .products-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .card-header h2 { font-size: 1rem; font-weight: 700; }
+
+  .btn-add {
+    background: #e53e3e;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.2s;
+  }
+  .btn-add:hover { background: #c53030; }
+
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; min-width: 800px; }
+  thead th {
+    background: #f7fafc;
+    padding: 10px 12px;
+    text-align: left;
+    font-size: 0.78rem;
+    color: #718096;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-bottom: 2px solid #e2e8f0;
+  }
+  tbody tr { border-bottom: 1px solid #f0f4f8; transition: background 0.15s; }
+  tbody tr:hover { background: #fef5f5; }
+  tbody td { padding: 10px 12px; vertical-align: middle; }
+
+  .td-input {
+    width: 100%;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .td-input:focus { border-color: #e53e3e; }
+
+  .calc-val { font-weight: 600; font-size: 0.9rem; }
+  .cost-total { color: #c53030; }
+  .profit-pos { color: #38a169; }
+  .profit-neg { color: #e53e3e; }
+  .margin-val { font-size: 0.8rem; }
+
+  .btn-del {
+    background: none;
+    border: none;
+    color: #fc8181;
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background 0.2s, color 0.2s;
+  }
+  .btn-del:hover { background: #fff5f5; color: #e53e3e; }
+
+  .summary-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+  .summary-card h2 { font-size: 1rem; font-weight: 700; margin-bottom: 16px; }
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+  }
+  .summary-box {
+    background: #f7fafc;
+    border-radius: 10px;
+    padding: 14px 16px;
+    border-left: 4px solid #e2e8f0;
+  }
+  .summary-box.red { border-color: #e53e3e; }
+  .summary-box.green { border-color: #38a169; }
+  .summary-box.blue { border-color: #3182ce; }
+  .summary-box.orange { border-color: #dd6b20; }
+  .summary-box .label { font-size: 0.75rem; color: #718096; margin-bottom: 4px; font-weight: 600; }
+  .summary-box .value { font-size: 1.3rem; font-weight: 700; }
+  .summary-box.red .value { color: #c53030; }
+  .summary-box.green .value { color: #276749; }
+  .summary-box.blue .value { color: #2b6cb0; }
+  .summary-box.orange .value { color: #c05621; }
+
+  .empty-row td { text-align: center; color: #a0aec0; padding: 30px; font-size: 0.9rem; }
+
+  @media (max-width: 600px) {
+    .header h1 { font-size: 1.1rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <span>🇨🇳</span>
+  <div>
+    <h1>คำนวณต้นทุนสินค้าจีน</h1>
+    <div style="font-size:0.8rem;opacity:0.85">นำเข้าสินค้าจากจีน → ขายในไทย</div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Settings -->
+  <div class="settings-card">
+    <h2>⚙️ ตั้งค่าการนำเข้า</h2>
+    <div class="field">
+      <label>ค่าขนส่งรวม (บาท)</label>
+      <input type="number" id="shipping" value="0" step="1" min="0" oninput="recalc()">
+      <div class="unit">แบ่งตามสัดส่วนราคาสินค้า</div>
+    </div>
+    <div class="field">
+      <label>ค่าธรรมเนียม/อื่นๆ (บาท)</label>
+      <input type="number" id="extra" value="0" step="1" min="0" oninput="recalc()">
+      <div class="unit">ภาษี, ค่าบริการ ฯลฯ</div>
+    </div>
+  </div>
+
+  <!-- Products -->
+  <div class="products-card">
+    <div class="card-header">
+      <h2>📦 รายการสินค้า</h2>
+      <button class="btn-add" onclick="addRow()">+ เพิ่มสินค้า</button>
+    </div>
+    <div class="table-wrap">
+      <table id="tbl">
+        <thead>
+          <tr>
+            <th style="width:160px">ชื่อสินค้า</th>
+            <th style="width:70px">จำนวน</th>
+            <th style="width:100px">ราคา/ชิ้น (¥)</th>
+            <th style="width:90px">เรท (¥→฿)</th>
+            <th style="width:110px">ราคาของรวม (฿)</th>
+            <th style="width:110px">ค่าส่งที่แบ่ง (฿)</th>
+            <th style="width:120px">ต้นทุน/ชิ้น (฿)</th>
+            <th style="width:110px">ราคาขาย/ชิ้น (฿)</th>
+            <th style="width:90px">กำไร/ชิ้น (฿)</th>
+            <th style="width:80px">กำไรรวม (฿)</th>
+            <th style="width:40px"></th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <tr class="empty-row"><td colspan="11">กดปุ่ม "+ เพิ่มสินค้า" เพื่อเริ่มต้น</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Summary -->
+  <div class="summary-card">
+    <h2>📊 สรุปภาพรวม</h2>
+    <div class="summary-grid">
+      <div class="summary-box blue">
+        <div class="label">จำนวนรายการ</div>
+        <div class="value" id="s-items">0 รายการ</div>
+      </div>
+      <div class="summary-box blue">
+        <div class="label">จำนวนชิ้นทั้งหมด</div>
+        <div class="value" id="s-qty">0 ชิ้น</div>
+      </div>
+      <div class="summary-box red">
+        <div class="label">ต้นทุนสินค้ารวม (฿)</div>
+        <div class="value" id="s-cost">฿0</div>
+      </div>
+      <div class="summary-box orange">
+        <div class="label">ค่าขนส่ง+ค่าธรรมเนียม (฿)</div>
+        <div class="value" id="s-ship">฿0</div>
+      </div>
+      <div class="summary-box red">
+        <div class="label">ต้นทุนรวมทั้งหมด (฿)</div>
+        <div class="value" id="s-total">฿0</div>
+      </div>
+      <div class="summary-box blue">
+        <div class="label">ราคาขายรวม (฿)</div>
+        <div class="value" id="s-sell">฿0</div>
+      </div>
+      <div class="summary-box green">
+        <div class="label">กำไรรวม (฿)</div>
+        <div class="value" id="s-profit">฿0</div>
+      </div>
+      <div class="summary-box green">
+        <div class="label">อัตรากำไร (%)</div>
+        <div class="value" id="s-margin">0%</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let rows = [];
+
+function addRow() {
+  const id = Date.now();
+  rows.push({ id, name: '', qty: 1, price: 0, rate: 4.9, sell: 0 });
+  renderTable();
+  recalc();
+}
+
+function deleteRow(id) {
+  rows = rows.filter(r => r.id !== id);
+  renderTable();
+  recalc();
+}
+
+function updateRow(id, field, val) {
+  const r = rows.find(r => r.id === id);
+  if (!r) return;
+  if (field === 'name') r.name = val;
+  else r[field] = parseFloat(val) || 0;
+  recalc();
+}
+
+function renderTable() {
+  const tbody = document.getElementById('tbody');
+  if (rows.length === 0) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="10">กดปุ่ม "+ เพิ่มสินค้า" เพื่อเริ่มต้น</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map(r => `
+    <tr id="row-${r.id}">
+      <td><input class="td-input" type="text" placeholder="ชื่อสินค้า" value="${r.name}" oninput="updateRow(${r.id},'name',this.value)"></td>
+      <td><input class="td-input" type="number" min="1" value="${r.qty}" oninput="updateRow(${r.id},'qty',this.value)"></td>
+      <td><input class="td-input" type="number" min="0" step="0.01" value="${r.price}" oninput="updateRow(${r.id},'price',this.value)"></td>
+      <td><input class="td-input" type="number" min="0" step="0.001" value="${r.rate}" oninput="updateRow(${r.id},'rate',this.value)"></td>
+      <td class="calc-val cost-total" id="c-subtotal-${r.id}">฿0</td>
+      <td class="calc-val" id="c-shipalloc-${r.id}" style="color:#dd6b20">฿0</td>
+      <td class="calc-val cost-total" id="c-costperunit-${r.id}">฿0</td>
+      <td><input class="td-input" type="number" min="0" step="0.01" value="${r.sell}" oninput="updateRow(${r.id},'sell',this.value)"></td>
+      <td class="calc-val" id="c-profitunit-${r.id}">฿0</td>
+      <td class="calc-val" id="c-profittotal-${r.id}">฿0</td>
+      <td><button class="btn-del" onclick="deleteRow(${r.id})" title="ลบ">✕</button></td>
+    </tr>
+  `).join('');
+}
+
+function fmt(n) {
+  return n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function recalc() {
+  const shipping = parseFloat(document.getElementById('shipping').value) || 0;
+  const extra = parseFloat(document.getElementById('extra').value) || 0;
+  const totalExtra = shipping + extra;
+
+  // Total goods value in THB (for proportional shipping)
+  let totalGoodsTHB = 0;
+  rows.forEach(r => {
+    totalGoodsTHB += r.qty * r.price * r.rate;
+  });
+
+  let totalCost = 0, totalSell = 0, totalQty = 0;
+
+  rows.forEach(r => {
+    const subtotal = r.qty * r.price * r.rate; // cost of all units in THB
+    const shipAlloc = totalGoodsTHB > 0 ? (subtotal / totalGoodsTHB) * totalExtra : 0;
+    const costPerUnit = r.qty > 0 ? (subtotal + shipAlloc) / r.qty : 0;
+    const profitUnit = r.sell - costPerUnit;
+    const profitTotal = profitUnit * r.qty;
+
+    totalCost += subtotal + shipAlloc;
+    totalSell += r.sell * r.qty;
+    totalQty += r.qty;
+
+    const el = (id) => document.getElementById(id);
+    if (el(`c-subtotal-${r.id}`)) {
+      el(`c-subtotal-${r.id}`).textContent = '฿' + fmt(subtotal);
+      el(`c-shipalloc-${r.id}`).textContent = '฿' + fmt(shipAlloc);
+      el(`c-costperunit-${r.id}`).textContent = '฿' + fmt(costPerUnit);
+
+      const pu = el(`c-profitunit-${r.id}`);
+      pu.textContent = '฿' + fmt(profitUnit);
+      pu.className = 'calc-val ' + (profitUnit >= 0 ? 'profit-pos' : 'profit-neg');
+
+      const pt = el(`c-profittotal-${r.id}`);
+      pt.textContent = '฿' + fmt(profitTotal);
+      pt.className = 'calc-val ' + (profitTotal >= 0 ? 'profit-pos' : 'profit-neg');
+    }
+  });
+
+  const profit = totalSell - totalCost;
+  const margin = totalSell > 0 ? (profit / totalSell) * 100 : 0;
+
+  document.getElementById('s-items').textContent = rows.length + ' รายการ';
+  document.getElementById('s-qty').textContent = totalQty.toLocaleString() + ' ชิ้น';
+  document.getElementById('s-cost').textContent = '฿' + fmt(totalGoodsTHB);
+  document.getElementById('s-ship').textContent = '฿' + fmt(totalExtra);
+  document.getElementById('s-total').textContent = '฿' + fmt(totalCost);
+  document.getElementById('s-sell').textContent = '฿' + fmt(totalSell);
+
+  const sp = document.getElementById('s-profit');
+  sp.textContent = '฿' + fmt(profit);
+  sp.style.color = profit >= 0 ? '#276749' : '#c53030';
+
+  const sm = document.getElementById('s-margin');
+  sm.textContent = fmt(margin) + '%';
+  sm.style.color = margin >= 0 ? '#276749' : '#c53030';
+}
+
+// Init with example
+addRow();
+const r = rows[0];
+r.name = 'ตัวอย่างสินค้า';
+r.qty = 10;
+r.price = 50;
+r.rate = 4.9;
+r.sell = 350;
+renderTable();
+recalc();
+</script>
+</body>
+</html>
