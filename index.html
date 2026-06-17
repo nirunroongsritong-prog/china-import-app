@@ -912,6 +912,7 @@ let soldMap = {};
 let currentSaleItem = null; // item ที่กำลังจะขาย
 
 async function loadSalesPage() {
+  try {
   document.getElementById('sale-products').innerHTML = '<div class="loading"><div class="spin"></div></div>';
   document.getElementById('sales-history').innerHTML = '<div class="loading"><div class="spin"></div></div>';
   document.getElementById('sale-date-label').textContent = new Date().toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
@@ -978,7 +979,7 @@ async function loadSalesPage() {
           </div>
         </div>
         ${remaining > 0
-          ? `<button onclick='openSaleModal(${JSON.stringify(item)})' style="flex-shrink:0;padding:8px 14px;background:#e53e3e;color:white;border:none;border-radius:8px;font-size:0.85rem;font-weight:700;cursor:pointer">ขาย</button>`
+          ? `<button onclick="openSaleModalById('${item.id}')" style="flex-shrink:0;padding:8px 14px;background:#e53e3e;color:white;border:none;border-radius:8px;font-size:0.85rem;font-weight:700;cursor:pointer">ขาย</button>`
           : `<span style="flex-shrink:0;padding:8px 14px;background:#f7fafc;color:#a0aec0;border-radius:8px;font-size:0.8rem">หมด</span>`
         }
       </div>`;
@@ -1024,9 +1025,18 @@ async function loadSalesPage() {
       </div>`;
     }).join('');
   }
+  } catch(e) {
+    document.getElementById('sale-products').innerHTML = `<div class="empty" style="color:#c53030">โหลดไม่ได้: ${e.message}</div>`;
+  }
 }
 
 // ─── SALE MODAL ───────────────────────────────────
+function openSaleModalById(itemId) {
+  const item = allItems.find(i => String(i.id) === String(itemId));
+  if (!item) return;
+  openSaleModal(item);
+}
+
 function openSaleModal(item) {
   currentSaleItem = item;
   const remaining = item.qty - (soldMap[item.id] || 0);
