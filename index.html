@@ -921,14 +921,18 @@ async function loadSalesPage() {
   // โหลดข้อมูล
   let r1, r2, r3;
   try {
-    [r1, r2, r3] = await Promise.all([
-      sb.from('imports').select('id,name,shipping_cost,extra_cost'),
-      sb.from('import_items').select('*').order('name'),
-      sb.from('sales').select('*').order('sold_at',{ascending:false})
+    const tout = new Promise((_,rj) => setTimeout(() => rj(new Error('หมดเวลา 8 วิ')), 8000));
+    [r1, r2, r3] = await Promise.race([
+      Promise.all([
+        sb.from('imports').select('id,name,shipping_cost,extra_cost'),
+        sb.from('import_items').select('*').order('name'),
+        sb.from('sales').select('*').order('sold_at',{ascending:false})
+      ]),
+      tout
     ]);
   } catch(e) {
-    elProd.innerHTML = '<div class="empty" style="color:#c53030">❌ เชื่อมต่อ Supabase ไม่ได้: ' + e.message + '</div>';
-    elHist.innerHTML = '';
+    document.getElementById('s2-products').innerHTML = '<div class="empty" style="color:#c53030">❌ ' + e.message + '</div>';
+    document.getElementById('s2-history').innerHTML = '';
     return;
   }
 
@@ -1369,9 +1373,13 @@ async function initApp() {
 
 // ─── INIT ─────────────────────────────────────────
 // Auto-load sales page when it becomes active
+let s2Loading = false;
 new MutationObserver(() => {
   const pg = document.getElementById('page-sales');
-  if (pg && pg.classList.contains('active')) loadSalesPage();
+  if (pg && pg.classList.contains('active') && !s2Loading) {
+    s2Loading = true;
+    loadSalesPage().finally(() => { s2Loading = false; });
+  }
 }).observe(document.body, { attributes: true, subtree: true, attributeFilter: ['class'] });
 
 initApp();
