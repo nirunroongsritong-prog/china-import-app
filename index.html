@@ -657,6 +657,7 @@ function removeRow(idx) {
   rows[idx]._deleted = true;
   renderItems();
   recalc();
+  triggerAutoSave();
 }
 
 function renderItems() {
