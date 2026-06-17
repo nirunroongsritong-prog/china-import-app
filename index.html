@@ -912,6 +912,7 @@ let soldMap = {};
 let currentSaleItem = null; // item ที่กำลังจะขาย
 
 async function loadSalesPage() {
+  alert('loadSalesPage ถูกเรียก');
   try {
   document.getElementById('sale-products').innerHTML = '<div class="loading"><div class="spin"></div></div>';
   document.getElementById('sales-history').innerHTML = '<div class="loading"><div class="spin"></div></div>';
