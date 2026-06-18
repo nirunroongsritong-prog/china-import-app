@@ -7,20 +7,26 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="PapaPlay">
-<meta name="theme-color" content="#e53e3e">
+<meta name="theme-color" content="#9333EA">
 <link rel="manifest" href='data:application/manifest+json,{"name":"PapaPlay","short_name":"PapaPlay","start_url":"/","display":"standalone","background_color":"#e53e3e","theme_color":"#e53e3e","icons":[{"src":"https://img.icons8.com/emoji/192/shopping-bags.png","sizes":"192x192","type":"image/png"}]}'>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #2d3748; min-height: 100vh; padding-bottom: 70px; }
+body {
+  font-family: 'Segoe UI', sans-serif; color: #2d3748; min-height: 100vh; padding-bottom: 70px;
+  background-color: #F5F0FF;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cg fill='%239333EA' opacity='0.07'%3E%3Cellipse cx='60' cy='52' rx='28' ry='17'/%3E%3Cellipse cx='88' cy='44' rx='22' ry='14'/%3E%3Cellipse cx='36' cy='57' rx='17' ry='11'/%3E%3Crect x='19' y='52' width='91' height='20' rx='3'/%3E%3Cpolygon points='280,22 284,37 299,37 287,47 292,62 280,52 268,62 273,47 261,37 276,37'/%3E%3Cpolygon points='330,130 332,138 340,138 334,143 336,151 330,146 324,151 326,143 320,138 328,138'/%3E%3Cellipse cx='210' cy='200' rx='22' ry='14'/%3E%3Cellipse cx='234' cy='193' rx='17' ry='11'/%3E%3Cellipse cx='190' cy='205' rx='13' ry='9'/%3E%3Crect x='177' y='200' width='74' height='17' rx='3'/%3E%3Cpolygon points='80,270 83,281 94,281 86,288 89,299 80,292 71,299 74,288 66,281 77,281'/%3E%3Cpolygon points='160,310 162,318 170,318 164,323 166,331 160,326 154,331 156,323 150,318 158,318'/%3E%3Cellipse cx='330' cy='310' rx='18' ry='11'/%3E%3Cellipse cx='350' cy='305' rx='14' ry='9'/%3E%3Cellipse cx='314' cy='314' rx='11' ry='7'/%3E%3Crect x='303' y='310' width='61' height='14' rx='3'/%3E%3Cpolygon points='50,340 52,347 59,347 54,351 56,358 50,354 44,358 46,351 41,347 48,347'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 400px 400px;
+}
 
 /* ── HEADER ── */
 .header {
-  background: linear-gradient(135deg, #e53e3e, #c53030);
+  background: linear-gradient(135deg, #9333EA, #C084FC);
   color: white; padding: 14px 16px;
   display: flex; align-items: center; justify-content: space-between;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2); position: sticky; top: 0; z-index: 100;
+  box-shadow: 0 4px 16px rgba(147,51,234,0.3); position: sticky; top: 0; z-index: 100;
 }
 .header h1 { font-size: 1.1rem; font-weight: 700; }
 .header-left { display: flex; align-items: center; gap: 10px; }
@@ -29,8 +35,9 @@ body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #2d3748;
 /* ── BOTTOM NAV ── */
 .bottom-nav {
   position: fixed; bottom: 0; left: 0; right: 0; height: 60px;
-  background: white; border-top: 1px solid #e2e8f0;
-  display: flex; z-index: 100;
+  background: rgba(255,255,255,0.95); border-top: 1px solid #EDE9FE;
+  display: flex; z-index: 100; backdrop-filter: blur(8px);
+  box-shadow: 0 -4px 16px rgba(147,51,234,0.08);
 }
 .nav-btn {
   flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -38,31 +45,32 @@ body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #2d3748;
   gap: 3px; transition: color 0.2s;
 }
 .nav-btn .nav-icon { font-size: 1.3rem; }
-.nav-btn.active { color: #e53e3e; }
+.nav-btn.active { color: #9333EA; }
 .nav-btn.active .nav-label { font-weight: 700; }
 
 /* ── CONTAINER ── */
 .container { max-width: 700px; margin: 0 auto; padding: 16px; }
 
 /* ── CARDS ── */
-.card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+.card { background: white; border-radius: 18px; padding: 16px; margin-bottom: 14px; box-shadow: 0 4px 16px rgba(147,51,234,0.08); }
 
 /* ── IMPORT LIST ── */
 .btn-new {
-  width: 100%; padding: 14px; background: #e53e3e; color: white;
-  border: none; border-radius: 10px; font-size: 1rem; font-weight: 700;
-  cursor: pointer; margin-bottom: 14px; transition: background 0.2s;
+  width: 100%; padding: 14px; background: linear-gradient(135deg, #9333EA, #C084FC); color: white;
+  border: none; border-radius: 14px; font-size: 1rem; font-weight: 700;
+  cursor: pointer; margin-bottom: 14px; transition: opacity 0.2s;
+  box-shadow: 0 4px 12px rgba(147,51,234,0.3);
 }
-.btn-new:hover { background: #c53030; }
+.btn-new:hover { opacity: 0.88; }
 
 .import-item {
-  background: white; border-radius: 10px; padding: 14px 16px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08); cursor: pointer;
+  background: white; border-radius: 16px; padding: 14px 16px;
+  box-shadow: 0 4px 14px rgba(147,51,234,0.08); cursor: pointer;
   display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 10px; border-left: 4px solid #e53e3e;
+  margin-bottom: 10px; border-left: 4px solid #A855F7;
   transition: box-shadow 0.2s;
 }
-.import-item:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+.import-item:hover { box-shadow: 0 6px 20px rgba(147,51,234,0.15); }
 .import-item h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 3px; }
 .import-item .meta { font-size: 0.78rem; color: #718096; }
 .import-item .stat-cost { font-size: 1rem; font-weight: 700; color: #e53e3e; }
@@ -75,13 +83,13 @@ body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #2d3748;
   width: 100%; padding: 9px 12px; border: 2px solid #e2e8f0;
   border-radius: 8px; font-size: 0.95rem; outline: none; transition: border-color 0.2s;
 }
-.field input:focus { border-color: #e53e3e; }
+.field input:focus { border-color: #A855F7; }
 
 /* ── ITEM CARDS ── */
 .item-card {
-  background: white; border-radius: 12px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 12px;
-  overflow: hidden; border: 1px solid #f0f4f8;
+  background: white; border-radius: 18px;
+  box-shadow: 0 4px 16px rgba(147,51,234,0.08); margin-bottom: 12px;
+  overflow: hidden; border: 1px solid #EDE9FE;
 }
 .item-card-head {
   display: flex; align-items: flex-start; gap: 12px; padding: 14px;
@@ -114,10 +122,10 @@ body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #2d3748;
 .qty-input:focus { border-color: #e53e3e; }
 .stock-badge {
   display: inline-flex; align-items: center; gap: 4px;
-  background: #f0fff4; color: #276749; border-radius: 6px;
-  padding: 4px 8px; font-size: 0.78rem; font-weight: 700;
+  background: #F3E8FF; color: #7E22CE; border-radius: 20px;
+  padding: 4px 10px; font-size: 0.78rem; font-weight: 700;
 }
-.stock-badge.low { background: #fff5f5; color: #c53030; }
+.stock-badge.low { background: #FEE2E2; color: #c53030; }
 
 .btn-del-item {
   flex-shrink: 0; background: none; border: none; color: #fc8181;
@@ -131,7 +139,7 @@ body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #2d3748;
   width: 100%; padding: 7px 9px; border: 2px solid #e2e8f0;
   border-radius: 7px; font-size: 0.9rem; outline: none;
 }
-.mini-input:focus { border-color: #e53e3e; }
+.mini-input:focus { border-color: #A855F7; }
 .mini-calc { padding: 7px 9px; background: #f7fafc; border-radius: 7px; font-size: 0.9rem; font-weight: 700; }
 .mini-calc.red { color: #c53030; background: #fff5f5; }
 .mini-calc.green { color: #276749; background: #f0fff4; }
@@ -139,11 +147,11 @@ body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #2d3748;
 
 /* ── ADD ITEM BTN ── */
 .btn-add-item {
-  width: 100%; padding: 12px; background: white; color: #e53e3e;
-  border: 2px dashed #fc8181; border-radius: 10px; font-size: 0.95rem;
+  width: 100%; padding: 12px; background: white; color: #9333EA;
+  border: 2px dashed #C084FC; border-radius: 14px; font-size: 0.95rem;
   font-weight: 700; cursor: pointer; margin-bottom: 12px; transition: all 0.2s;
 }
-.btn-add-item:hover { background: #fff5f5; border-color: #e53e3e; }
+.btn-add-item:hover { background: #F5F0FF; border-color: #9333EA; }
 
 /* ── SUMMARY ── */
 .summary-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
@@ -171,7 +179,7 @@ body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #2d3748;
 @media(min-width:700px) {
   .save-bar { left: 50%; transform: translateX(-50%); right: auto; width: 700px; }
 }
-.btn-save { flex: 1; padding: 11px; background: #e53e3e; color: white; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 700; cursor: pointer; }
+.btn-save { flex: 1; padding: 11px; background: linear-gradient(135deg, #9333EA, #C084FC); color: white; border: none; border-radius: 12px; font-size: 0.95rem; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(147,51,234,0.25); }
 .btn-save:disabled { opacity: 0.6; }
 .btn-del-import { padding: 11px 14px; background: #fed7d7; color: #c53030; border: none; border-radius: 8px; font-size: 0.88rem; font-weight: 700; cursor: pointer; }
 
@@ -184,7 +192,7 @@ body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #2d3748;
 .modal input { width: 100%; padding: 11px 14px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 1rem; outline: none; margin-bottom: 14px; }
 .modal input:focus { border-color: #e53e3e; }
 .modal-btns { display: flex; gap: 8px; }
-.btn-primary { flex: 1; padding: 11px; background: #e53e3e; color: white; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 700; cursor: pointer; }
+.btn-primary { flex: 1; padding: 11px; background: linear-gradient(135deg, #9333EA, #C084FC); color: white; border: none; border-radius: 12px; font-size: 0.95rem; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(147,51,234,0.25); }
 .btn-cancel { flex: 1; padding: 11px; background: #edf2f7; color: #4a5568; border: none; border-radius: 8px; font-size: 0.95rem; cursor: pointer; }
 
 /* ── PLACEHOLDER PAGES ── */
@@ -215,7 +223,7 @@ body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #2d3748;
   background: white; cursor: pointer; color: #2d3748;
   transition: all 0.1s; user-select: none;
 }
-.pin-btn:active { background: #e53e3e; color: white; border-color: #e53e3e; transform: scale(0.93); }
+.pin-btn:active { background: #9333EA; color: white; border-color: #9333EA; transform: scale(0.93); }
 
 .period-btn {
   flex-shrink: 0; padding: 7px 14px; border: 2px solid #e2e8f0;
@@ -223,13 +231,13 @@ body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #2d3748;
   font-weight: 600; cursor: pointer; color: #718096; white-space: nowrap;
   transition: all 0.15s;
 }
-.period-btn.active { background: #e53e3e; border-color: #e53e3e; color: white; }
+.period-btn.active { background: linear-gradient(135deg, #9333EA, #C084FC); border-color: #9333EA; color: white; }
 </style>
 </head>
 <body>
 
 <!-- Lock Screen -->
-<div id="lockscreen" style="position:fixed;inset:0;background:linear-gradient(135deg,#e53e3e,#c53030);z-index:999;display:flex;align-items:center;justify-content:center;padding:20px">
+<div id="lockscreen" style="position:fixed;inset:0;background:linear-gradient(135deg,#9333EA,#C084FC);z-index:999;display:flex;align-items:center;justify-content:center;padding:20px">
   <div style="background:white;border-radius:20px;padding:28px 24px;width:100%;max-width:300px;text-align:center">
     <div style="font-size:2.2rem;margin-bottom:6px">🔐</div>
     <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:4px">PapaPlay</h2>
