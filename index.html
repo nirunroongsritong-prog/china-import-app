@@ -717,6 +717,7 @@ function renderItems() {
             : `<span class="img-placeholder" id="img-${idx}">📷</span>`
           }
           <input type="file" accept="image/*" onchange="uploadImage(${idx}, this)" title="อัปโหลดรูป">
+          ${imgSrc ? `<button onclick="event.stopPropagation();openLightbox('${imgSrc}')" style="position:absolute;top:3px;right:3px;background:rgba(0,0,0,0.55);border:none;color:white;border-radius:4px;font-size:0.75rem;padding:2px 5px;cursor:pointer;z-index:10;line-height:1">🔍</button>` : ''}
         </div>
         <div class="item-head-info">
           <input class="item-name-input" type="text" placeholder="ชื่อสินค้า (พิมพ์ได้ยาวๆ เลย)"
