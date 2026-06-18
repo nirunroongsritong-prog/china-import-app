@@ -805,6 +805,10 @@ function renderItems() {
             oninput="updateRow(${idx},'tiktok_flashsale',this.value)">
         </div>
         <div class="mini-field">
+          <label>ราคาหลัง Flashsale (฿)</label>
+          <div class="mini-calc" style="background:#FEF3C7;color:#92400E;" id="c-flash-${idx}">฿0.00</div>
+        </div>
+        <div class="mini-field">
           <label>กำไร/ชิ้น (฿)</label>
           <div class="mini-calc" id="c-pu-${idx}">฿0.00</div>
         </div>
@@ -909,6 +913,8 @@ function recalc() {
       g(`c-ship-${idx}`).textContent = '฿' + fmt(shipPerUnit);
       g(`c-cost-${idx}`).textContent = '฿' + fmt(costPerUnit);
       g(`c-sellrec-${idx}`).textContent = '฿' + fmt(r.sell_price);
+      const flashPrice = r.sell_price - (r.sell_price * (r.tiktok_flashsale||0) / 100);
+      g(`c-flash-${idx}`).textContent = '฿' + fmt(flashPrice);
       g(`c-ttk-${idx}`).textContent = '฿' + fmt(tiktokFee30);
       g(`c-grandtotal-${idx}`).textContent = '฿' + fmt(grandTotal);
       const pu = g(`c-pu-${idx}`);
