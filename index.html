@@ -853,7 +853,7 @@ function recalc() {
   const visible = rows.filter(r => !r._deleted);
   const totalGoods = visible.reduce((s, r) => s + r.qty * r.price_cny * r.rate, 0);
 
-  let totCost = 0, totSell = 0, totQty = 0, totCny = 0;
+  let totCost = 0, totSell = 0, totQty = 0, totCny = 0, totComm = 0;
 
   visible.forEach(r => {
     const idx = rows.indexOf(r);
@@ -871,6 +871,7 @@ function recalc() {
     const profitTotal = profitUnit * r.qty;
 
     totCost += sub + shipAlloc;
+    totComm += commissionPerUnit * r.qty;
     totSell += r.sell_price * r.qty;
     totQty += r.qty;
     totCny += r.qty * r.price_cny;
@@ -891,7 +892,7 @@ function recalc() {
     }
   });
 
-  const profit = totSell - totCost;
+  const profit = totSell - totCost - totComm;
   const margin = totSell > 0 ? (profit / totSell) * 100 : 0;
   document.getElementById('s-items').textContent = visible.length;
   document.getElementById('s-qty').textContent = totQty.toLocaleString();
