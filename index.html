@@ -515,6 +515,11 @@ body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #2d3748;
 
 <div class="toast" id="toast"></div>
 
+<!-- Lightbox -->
+<div id="lightbox" onclick="closeLightbox()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;align-items:center;justify-content:center;cursor:zoom-out">
+  <img id="lightbox-img" src="" style="max-width:92vw;max-height:88vh;object-fit:contain;border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,0.5)">
+</div>
+
 <script>
 const SUPABASE_URL = 'https://hnregxwwuscdiujuvyvi.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_ROL_c5M1TSJy_7YWoR0Tnw_R00pzLZd';
@@ -524,6 +529,16 @@ let currentImport = null;
 let rows = [];
 let currentTab = 'warehouse';
 let warehouseSubPage = 'list'; // 'list' | 'detail'
+
+// ─── LIGHTBOX ────────────────────────────────────
+function openLightbox(src) {
+  const lb = document.getElementById('lightbox');
+  document.getElementById('lightbox-img').src = src;
+  lb.style.display = 'flex';
+}
+function closeLightbox() {
+  document.getElementById('lightbox').style.display = 'none';
+}
 
 // ─── TOAST ───────────────────────────────────────
 function toast(msg, dur = 2500) {
@@ -1033,7 +1048,7 @@ async function loadSalesPage() {
       const rem = item.qty - (s2SoldMap[item.id]||0);
       const cost = s2CostMap[item.id]||0;
       const img = item.image_url
-        ? '<img src="'+item.image_url+'" style="width:52px;height:52px;object-fit:cover;border-radius:8px;flex-shrink:0">'
+        ? '<img src="'+item.image_url+'" onclick="openLightbox(\''+item.image_url+'\')" style="width:52px;height:52px;object-fit:cover;border-radius:8px;flex-shrink:0;cursor:zoom-in">'
         : '<div style="width:52px;height:52px;background:#f7fafc;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;border:1px solid #e2e8f0">📦</div>';
       const remColor = rem <= 0 ? '#c53030' : rem <= 5 ? '#c05621' : '#276749';
       const btn = rem > 0
@@ -1070,7 +1085,7 @@ async function loadSalesPage() {
       const profit = rev - tc;
       const time = new Date(s.sold_at).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
       const img2 = item.image_url
-        ? '<img src="'+item.image_url+'" style="width:40px;height:40px;object-fit:cover;border-radius:6px;flex-shrink:0">'
+        ? '<img src="'+item.image_url+'" onclick="openLightbox(\''+item.image_url+'\')" style="width:40px;height:40px;object-fit:cover;border-radius:6px;flex-shrink:0;cursor:zoom-in">'
         : '<div style="width:40px;height:40px;background:#f7fafc;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0">📦</div>';
       const extras = [];
       if (s.ship_cost>0) extras.push('ส่ง ฿'+fmt(s.ship_cost));
@@ -1321,7 +1336,7 @@ function renderSummary() {
     const profit = stat.revenue - stat.cost;
     const remaining = item.qty - (soldMapAll[itemId] || 0);
     const imgHtml = item.image_url
-      ? `<img src="${item.image_url}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;flex-shrink:0">`
+      ? `<img src="${item.image_url}" onclick="openLightbox('${item.image_url}')" style="width:40px;height:40px;object-fit:cover;border-radius:6px;flex-shrink:0;cursor:zoom-in">`
       : `<div style="width:40px;height:40px;background:#f7fafc;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0">📦</div>`;
     return `
     <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f7fafc">
