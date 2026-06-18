@@ -833,6 +833,7 @@ async function uploadImage(idx, input) {
   } else {
     imgEl.src = urlData.publicUrl;
   }
+  triggerAutoSave();
   toast('✅ อัปโหลดรูปสำเร็จ');
 }
 
