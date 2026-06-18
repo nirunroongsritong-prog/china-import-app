@@ -824,7 +824,7 @@ function renderItems() {
 function applyProfitMult(idx, mult) {
   if (!mult) return;
   const cost = rows[idx]._costPerUnit || 0;
-  const newPrice = Math.ceil(cost * (1 + parseFloat(mult)));
+  const newPrice = Math.ceil(cost * parseFloat(mult));
   rows[idx].sell_price = newPrice;
   rows[idx]._dirty = true;
   const inp = document.getElementById(`sp-${idx}`);
