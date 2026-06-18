@@ -774,11 +774,16 @@ function renderItems() {
           <div style="display:flex;gap:6px;align-items:center;">
             <input class="mini-input" id="sp-${idx}" type="number" min="0" step="0.01" value="${r.sell_price}"
               oninput="updateRow(${idx},'sell_price',this.value)" style="flex:1;">
-            <select class="mini-input" style="flex:0 0 auto;width:72px;padding:4px 6px;" onchange="applyProfitMult(${idx},this.value)">
-              <option value="">กำไร</option>
+            <select class="mini-input" style="flex:0 0 auto;width:80px;padding:4px 6px;" onchange="applyProfitMult(${idx},this.value)">
+              <option value="">คูณ</option>
               <option value="1">1x</option>
+              <option value="1.5">1.5x</option>
               <option value="2">2x</option>
+              <option value="2.5">2.5x</option>
               <option value="3">3x</option>
+              <option value="3.5">3.5x</option>
+              <option value="4">4x</option>
+              <option value="4.5">4.5x</option>
             </select>
           </div>
         </div>
