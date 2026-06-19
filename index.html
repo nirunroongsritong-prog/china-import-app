@@ -866,7 +866,7 @@ function renderItems() {
         <div class="mini-field">
           <label>Flashsale (%)</label>
           <div style="display:flex;gap:6px;align-items:center;">
-            <input class="mini-input" type="number" min="0" max="100" step="0.1" value="${r.tiktok_flashsale||0}"
+            <input class="mini-input" id="fs-${idx}" type="number" min="0" max="100" step="0.1" value="${r.tiktok_flashsale||0}"
               oninput="updateRow(${idx},'tiktok_flashsale',this.value)" style="flex:1;">
             <div class="mini-calc" style="flex:1;background:#FEF3C7;color:#92400E;" id="c-flash-${idx}">฿0.00</div>
           </div>
@@ -893,9 +893,9 @@ function syncFlashsale(idx) {
   const val = fp > 0 ? 3.21 : 0;
   rows[idx].tiktok_flashsale = val;
   rows[idx]._dirty = true;
-  const fsInputs = document.querySelectorAll(`[oninput*="'tiktok_flashsale'"]`);
-  const el = document.querySelector(`input[oninput="updateRow(${idx},'tiktok_flashsale',this.value)"]`);
+  const el = document.getElementById('fs-' + idx);
   if (el) el.value = val;
+  recalc();
 }
 
 function applyProfitMult(idx, mult) {
