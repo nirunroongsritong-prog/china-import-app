@@ -1221,7 +1221,7 @@ async function loadSalesPage() {
   try {
     [r1, r2, r3] = await Promise.all([
       sb.from('imports').select('id,name,shipping_cost,extra_cost'),
-      sb.from('import_items').select('*').order('name'),
+      sb.from('import_items').select('*').order('created_at'),
       sb.from('sales').select('*').order('sold_at',{ascending:false})
     ]);
   } catch(e) {
