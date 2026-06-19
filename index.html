@@ -1438,7 +1438,7 @@ function calcSaleProfit(fromUser) {
     const infraFee = 1.07;
     const affFee = baseForFee * (item.inf_commission||0) / 100;
     const flashFee = baseForFee * (item.tiktok_flashsale||0) / 100;
-    const shipShop = item.shipping_shop || 0;
+    const shipShop = shipActual + boxActual;
     const totalFees = commFee + growthFee + orderFee + infraFee + affFee + flashFee + shipShop;
     profitPerUnit = custPrice - costUnit - totalFees;
     rev = custPrice * qty;
