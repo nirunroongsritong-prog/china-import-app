@@ -673,7 +673,7 @@ function addRow() {
     id: null, import_id: currentImport.id,
     name: '', qty: 1, price_cny: 0, rate: 4.9, sell_price: 0, image_url: null,
     comm_rate: 7.49, growth_rate: 8.03, order_fee_rate: 3.21,
-    shipping_customer: 0, shipping_shop: 0, shop_discount: 0, tiktok_discount: 0,
+    shipping_customer: 0, shipping_shop: 0, shop_discount: 0, tiktok_discount: 0, flashsale_price: 0,
     inf_commission: 0, tiktok_flashsale: 0,
     _dirty: true, _new: true
   });
@@ -790,8 +790,13 @@ function renderItems() {
           </div>
         </div>
         <div class="mini-field">
-          <label>ส่วนลดร้านค้า (฿/ชิ้น)</label>
-          <input class="mini-input" type="number" min="0" step="0.01" value="${r.shop_discount||0}"
+          <label>ราคาแฟลชเซลที่ตั้งไว้ (฿/ชิ้น) <span style="font-size:0.6rem;color:#9333EA;">ถ้ามี</span></label>
+          <input class="mini-input" type="number" min="0" step="0.01" value="${r.flashsale_price||''}"
+            oninput="updateRow(${idx},'flashsale_price',this.value)" placeholder="ว่าง = ไม่เข้าแคมเปญ">
+        </div>
+        <div class="mini-field">
+          <label>ส่วนลดร้านค้า (฿/ชิ้น) <span style="font-size:0.6rem;color:#718096;" id="c-sd-auto-${idx}"></span></label>
+          <input class="mini-input" id="sd-${idx}" type="number" min="0" step="0.01" value="${r.shop_discount||0}"
             oninput="updateRow(${idx},'shop_discount',this.value)">
         </div>
         <div class="mini-field">
@@ -947,12 +952,23 @@ function recalc() {
     const shipAlloc = totalGoods > 0 ? (sub / totalGoods) * totalExtra : 0;
     const shipPerUnit = r.qty > 0 ? shipAlloc / r.qty : 0;
     const costPerUnit = goodsPerUnit + shipPerUnit;
-    const commFee = r.sell_price * (r.comm_rate||7.49) / 100;
-    const growthFee = Math.min(r.sell_price * (r.growth_rate||8.03) / 100, 199);
-    const orderFee = (r.sell_price + (r.shipping_customer||0)) * (r.order_fee_rate||3.21) / 100;
+    const fp = r.flashsale_price || 0;
+    let baseForFee, custPrice, shopDisc;
+    if (fp > 0) {
+      custPrice = fp;
+      shopDisc = r.sell_price - fp;
+      baseForFee = fp;
+    } else {
+      shopDisc = r.shop_discount || 0;
+      custPrice = r.sell_price - shopDisc - (r.tiktok_discount||0);
+      baseForFee = r.sell_price - shopDisc;
+    }
+    const commFee = baseForFee * (r.comm_rate||7.49) / 100;
+    const growthFee = Math.min(baseForFee * (r.growth_rate||8.03) / 100, 199);
+    const orderFee = (baseForFee + (r.shipping_customer||0)) * (r.order_fee_rate||3.21) / 100;
     const infraFee = 1.07;
-    const affFee = r.sell_price * (r.inf_commission||0) / 100;
-    const flashFee = r.sell_price * (r.tiktok_flashsale||0) / 100;
+    const affFee = baseForFee * (r.inf_commission||0) / 100;
+    const flashFee = baseForFee * (r.tiktok_flashsale||0) / 100;
     const shipShop = r.shipping_shop || 0;
     const totalFees = commFee + growthFee + orderFee + infraFee + affFee + flashFee + shipShop;
     const profitUnit = r.sell_price - costPerUnit - totalFees;
@@ -971,8 +987,17 @@ function recalc() {
       g(`c-goods-${idx}`).textContent = '฿' + fmt(goodsPerUnit);
       g(`c-ship-${idx}`).textContent = '฿' + fmt(shipPerUnit);
       g(`c-cost-${idx}`).textContent = '฿' + fmt(costPerUnit);
-      const custPrice = r.sell_price - (r.shop_discount||0) - (r.tiktok_discount||0);
       g(`c-custprice-${idx}`).textContent = '฿' + fmt(custPrice);
+      const sdAuto = g(`c-sd-auto-${idx}`);
+      const sdInput = document.getElementById(`sd-${idx}`);
+      if (fp > 0) {
+        sdAuto.textContent = '(auto ฿' + fmt(shopDisc) + ')';
+        sdInput.value = shopDisc;
+        sdInput.disabled = true;
+      } else {
+        sdAuto.textContent = '';
+        sdInput.disabled = false;
+      }
       g(`c-sellrec-${idx}`).textContent = '฿' + fmt(r.sell_price);
       g(`c-comm-${idx}`).textContent = '฿' + fmt(commFee);
       g(`c-growth-${idx}`).textContent = '฿' + fmt(growthFee);
@@ -1027,7 +1052,7 @@ async function saveAll() {
     sell_price: r.sell_price, image_url: r.image_url || null,
     comm_rate: r.comm_rate||7.49, growth_rate: r.growth_rate||8.03, order_fee_rate: r.order_fee_rate||3.21,
     shipping_customer: r.shipping_customer||0, shipping_shop: r.shipping_shop||0,
-    shop_discount: r.shop_discount||0, tiktok_discount: r.tiktok_discount||0,
+    shop_discount: r.shop_discount||0, tiktok_discount: r.tiktok_discount||0, flashsale_price: r.flashsale_price||0,
     inf_commission: r.inf_commission||0, tiktok_flashsale: r.tiktok_flashsale||0,
   }));
 
