@@ -377,6 +377,11 @@ body {
       <button class="period-btn" onclick="setPeriod('month')">เดือนนี้</button>
       <button class="period-btn active" onclick="setPeriod('all')">ทั้งหมด</button>
     </div>
+    <div style="display:flex;gap:6px;margin-bottom:14px">
+      <button class="period-btn channel-btn active" onclick="setChannel('all')">ทุกช่องทาง</button>
+      <button class="period-btn channel-btn" onclick="setChannel('shop')">🏪 หน้าร้าน</button>
+      <button class="period-btn channel-btn" onclick="setChannel('tiktok')">🎵 TikTok</button>
+    </div>
 
     <!-- Overview -->
     <div class="summary-grid" style="margin-bottom:14px">
@@ -1151,6 +1156,33 @@ let s2SoldMap = {};
 let s2CurrentItem = null;
 let s2SaveTimer = null;
 
+function calcSaleRecord(s, costMap) {
+  const costUnit = costMap[s.item_id] || 0;
+  if (s.sale_channel === 'tiktok') {
+    const fp = s.flashsale_price || 0;
+    let custPrice, baseForFee;
+    if (fp > 0) { custPrice = fp; baseForFee = fp; }
+    else {
+      const sd = s.shop_discount || 0;
+      custPrice = s.sell_price - sd - (s.tiktok_discount||0);
+      baseForFee = s.sell_price - sd;
+    }
+    const commFee = baseForFee * (s.comm_rate||7.49) / 100;
+    const growthFee = Math.min(baseForFee * (s.growth_rate||8.03) / 100, 199);
+    const orderFee = (baseForFee + (s.shipping_customer||0)) * (s.order_fee_rate||3.21) / 100;
+    const infraFee = 1.07;
+    const affFee = baseForFee * (s.inf_commission||0) / 100;
+    const flashFee = baseForFee * (s.tiktok_flashsale||0) / 100;
+    const shipShop = s.shipping_shop || 0;
+    const totalFees = commFee + growthFee + orderFee + infraFee + affFee + flashFee + shipShop;
+    const profitUnit = custPrice - costUnit - totalFees;
+    return { rev: custPrice * s.qty_sold, profit: profitUnit * s.qty_sold, costTotal: (costUnit + totalFees) * s.qty_sold };
+  } else {
+    const profitUnit = s.sell_price - costUnit;
+    return { rev: s.sell_price * s.qty_sold, profit: profitUnit * s.qty_sold, costTotal: costUnit * s.qty_sold };
+  }
+}
+
 async function loadSalesPage() {
   const elProd = document.getElementById('s2-products');
   const elHist = document.getElementById('s2-history');
@@ -1206,12 +1238,14 @@ async function loadSalesPage() {
   // สรุปวันนี้
   const todayStr = new Date().toDateString();
   const todaySales = allSales.filter(s => new Date(s.sold_at).toDateString() === todayStr);
-  const tRev = todaySales.reduce((a,x) => a + x.sell_price * x.qty_sold, 0);
-  const tCost = todaySales.reduce((a,x) => a + (s2CostMap[x.item_id]||0)*x.qty_sold + (x.ship_cost||0) + (x.box_cost||0) - (x.discount||0), 0);
-  const tProfit = tRev - tCost;
+  let tRev = 0, tProfit = 0, tCost2 = 0;
+  todaySales.forEach(s => {
+    const r = calcSaleRecord(s, s2CostMap);
+    tRev += r.rev; tProfit += r.profit; tCost2 += r.costTotal;
+  });
   document.getElementById('s2-count').textContent = todaySales.length + ' รายการ';
   document.getElementById('s2-revenue').textContent = '฿' + fmt(tRev);
-  document.getElementById('s2-cost').textContent = '฿' + fmt(tCost);
+  document.getElementById('s2-cost').textContent = '฿' + fmt(tCost2);
   const ep = document.getElementById('s2-profit');
   ep.textContent = '฿' + fmt(tProfit);
   ep.style.color = tProfit >= 0 ? '#276749' : '#c53030';
@@ -1254,28 +1288,22 @@ async function loadSalesPage() {
     let hhtml = '';
     todaySales.forEach(s => {
       const item = itemMap[s.item_id] || {};
-      const rev = s.sell_price * s.qty_sold;
-      const flashD = s.sell_price * (s.tiktok_flashsale||0) / 100;
-      const base = s.sell_price - flashD;
-      const comm = (flashD + base*(s.tiktok_commission||0)/100 + base*(s.inf_commission||0)/100) * s.qty_sold;
-      const tc = (s2CostMap[s.item_id]||0)*s.qty_sold + (s.ship_cost||0) + (s.box_cost||0) - (s.discount||0) + comm;
-      const profit = rev - tc;
+      const rec = calcSaleRecord(s, s2CostMap);
       const time = new Date(s.sold_at).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
       const img2 = item.image_url
         ? '<img src="'+item.image_url+'" onclick="openLightbox(\''+item.image_url+'\')" style="width:40px;height:40px;object-fit:cover;border-radius:6px;flex-shrink:0;cursor:zoom-in">'
         : '<div style="width:40px;height:40px;background:#f7fafc;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0">📦</div>';
-      const extras = [];
-      if (s.ship_cost>0) extras.push('ส่ง ฿'+fmt(s.ship_cost));
-      if (s.box_cost>0) extras.push('กล่อง ฿'+fmt(s.box_cost));
-      if (s.discount>0) extras.push('ลด ฿'+fmt(s.discount));
+      const chBadge = s.sale_channel==='tiktok'
+        ? '<span style="font-size:0.65rem;background:#F3E8FF;color:#7E22CE;padding:1px 6px;border-radius:10px;margin-left:4px">TikTok</span>'
+        : '<span style="font-size:0.65rem;background:#FED7D7;color:#c53030;padding:1px 6px;border-radius:10px;margin-left:4px">หน้าร้าน</span>';
       hhtml += '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f7fafc">'
         + img2
         + '<div style="flex:1;min-width:0">'
-        + '<div style="display:flex;align-items:baseline;gap:6px"><span style="font-weight:700;font-size:0.88rem">'+esc(item.name||'?')+'</span><span style="font-size:0.72rem;color:#a0aec0">'+time+'</span></div>'
-        + '<div style="font-size:0.75rem;color:#718096">'+s.qty_sold+' ชิ้น × ฿'+fmt(s.sell_price)+(extras.length?' · '+extras.join(' · '):'')+(s.note?' · '+esc(s.note):'')+'</div>'
+        + '<div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap"><span style="font-weight:700;font-size:0.88rem">'+esc(item.name||'?')+'</span>'+chBadge+'<span style="font-size:0.72rem;color:#a0aec0">'+time+'</span></div>'
+        + '<div style="font-size:0.75rem;color:#718096">'+s.qty_sold+' ชิ้น × ฿'+fmt(s.sell_price)+(s.note?' · '+esc(s.note):'')+'</div>'
         + '<div style="display:flex;gap:10px;margin-top:2px">'
-        + '<span style="font-size:0.78rem;color:#2b6cb0">รายได้ ฿'+fmt(rev)+'</span>'
-        + '<span style="font-size:0.78rem;font-weight:700;color:'+(profit>=0?'#276749':'#c53030')+'">กำไร ฿'+fmt(profit)+'</span>'
+        + '<span style="font-size:0.78rem;color:#2b6cb0">รายได้ ฿'+fmt(rec.rev)+'</span>'
+        + '<span style="font-size:0.78rem;font-weight:700;color:'+(rec.profit>=0?'#276749':'#c53030')+'">กำไร ฿'+fmt(rec.profit)+'</span>'
         + '</div></div>'
         + '<button onclick="s2DelSale(\''+s.id+'\')" style="background:none;border:none;color:#fc8181;cursor:pointer;font-size:1rem;padding:4px 6px;flex-shrink:0">✕</button>'
         + '</div>';
@@ -1286,6 +1314,41 @@ async function loadSalesPage() {
     elProd.innerHTML = '<div class="empty" style="color:#c53030">❌ Error: ' + (e.message||String(e)) + '</div>';
     elHist.innerHTML = '';
   }
+}
+
+let s2Channel = 'shop';
+
+function setSaleChannel(ch) {
+  s2Channel = ch;
+  const shopBtn = document.getElementById('ch-shop');
+  const tiktokBtn = document.getElementById('ch-tiktok');
+  const tiktokSection = document.getElementById('sm-tiktok-section');
+  if (ch === 'shop') {
+    shopBtn.style.background = '#e53e3e'; shopBtn.style.color = 'white';
+    tiktokBtn.style.background = '#f7fafc'; tiktokBtn.style.color = '#718096';
+    tiktokSection.style.display = 'none';
+    document.getElementById('sm-price-label').textContent = 'ราคาขายหน้าร้าน/ชิ้น (฿)';
+  } else {
+    tiktokBtn.style.background = '#9333EA'; tiktokBtn.style.color = 'white';
+    shopBtn.style.background = '#f7fafc'; shopBtn.style.color = '#718096';
+    tiktokSection.style.display = 'block';
+    document.getElementById('sm-price-label').textContent = 'ราคาขาย (ราคาเต็ม) (฿)';
+    fillTikTokFields();
+  }
+  calcSaleProfit();
+}
+
+function fillTikTokFields() {
+  if (!s2CurrentItem) return;
+  const item = s2CurrentItem;
+  const fp = item.flashsale_price || 0;
+  document.getElementById('sm-price').value = item.sell_price || 0;
+  document.getElementById('sp-comm-pct').textContent = item.comm_rate || 7.49;
+  document.getElementById('sp-growth-pct').textContent = item.growth_rate || 8.03;
+  document.getElementById('sp-order-pct').textContent = item.order_fee_rate || 3.21;
+  document.getElementById('sp-flash-pct').textContent = item.tiktok_flashsale || 0;
+  document.getElementById('sp-aff-pct').textContent = item.inf_commission || 0;
+  document.getElementById('sp-shipshop').textContent = '฿' + fmt(item.shipping_shop || 0);
 }
 
 function s2OpenModal(idx) {
@@ -1299,16 +1362,10 @@ function s2OpenModal(idx) {
   document.getElementById('sm-qty').value = 1;
   document.getElementById('sm-qty').max = rem;
   document.getElementById('sm-price').value = item.sell_price||0;
-  document.getElementById('sm-ship').value = 0;
-  document.getElementById('sm-box').value = 0;
-  document.getElementById('sm-discount').value = 0;
   document.getElementById('sm-note').value = '';
-  document.getElementById('sm-tiktok').value = item.tiktok_commission||0;
-  document.getElementById('sm-inf').value = item.inf_commission||0;
-  document.getElementById('sm-flashsale').value = item.tiktok_flashsale||0;
   s2UserTyped = false;
   clearTimeout(s2SaveTimer);
-  calcSaleProfit();
+  setSaleChannel('shop');
   document.getElementById('sale-modal').classList.add('open');
   setTimeout(()=>document.getElementById('sm-qty').focus(),150);
 }
@@ -1323,27 +1380,52 @@ let s2UserTyped = false;
 
 function calcSaleProfit(fromUser) {
   if (!s2CurrentItem) return;
-  const cost = s2CostMap[s2CurrentItem.id]||0;
+  const item = s2CurrentItem;
+  const costUnit = s2CostMap[item.id]||0;
   const qty = parseFloat(document.getElementById('sm-qty').value)||0;
   const price = parseFloat(document.getElementById('sm-price').value)||0;
-  const ship = parseFloat(document.getElementById('sm-ship').value)||0;
-  const box = parseFloat(document.getElementById('sm-box').value)||0;
-  const disc = parseFloat(document.getElementById('sm-discount').value)||0;
-  const tiktokPct = parseFloat(document.getElementById('sm-tiktok').value)||0;
-  const infPct = parseFloat(document.getElementById('sm-inf').value)||0;
-  const flashsalePct = parseFloat(document.getElementById('sm-flashsale').value)||0;
-  // สูตร commission: (ราคาขาย - ส่วนลด flashsale) × อัตราคอม
-  const flashsaleDeduct = price * flashsalePct / 100;
-  const basePrice = price - flashsaleDeduct;
-  const tiktokFee = basePrice * tiktokPct / 100;
-  const infFee = basePrice * infPct / 100;
-  const commPerUnit = flashsaleDeduct + tiktokFee + infFee;
-  const commTotal = commPerUnit * qty;
-  const rev = price * qty;
-  const tc = cost*qty + ship + box - disc + commTotal;
-  const profit = rev - tc;
-  document.getElementById('sp-commission').textContent = '฿'+fmt(commPerUnit);
-  document.getElementById('sp-cost').textContent = '฿'+fmt(cost);
+
+  let profitPerUnit, rev, tc;
+
+  if (s2Channel === 'shop') {
+    profitPerUnit = price - costUnit;
+    rev = price * qty;
+    tc = costUnit * qty;
+  } else {
+    const fp = item.flashsale_price || 0;
+    let custPrice, baseForFee;
+    if (fp > 0) {
+      custPrice = fp;
+      baseForFee = fp;
+    } else {
+      const shopDisc = item.shop_discount || 0;
+      custPrice = price - shopDisc - (item.tiktok_discount||0);
+      baseForFee = price - shopDisc;
+    }
+    const commFee = baseForFee * (item.comm_rate||7.49) / 100;
+    const growthFee = Math.min(baseForFee * (item.growth_rate||8.03) / 100, 199);
+    const orderFee = (baseForFee + (item.shipping_customer||0)) * (item.order_fee_rate||3.21) / 100;
+    const infraFee = 1.07;
+    const affFee = baseForFee * (item.inf_commission||0) / 100;
+    const flashFee = baseForFee * (item.tiktok_flashsale||0) / 100;
+    const shipShop = item.shipping_shop || 0;
+    const totalFees = commFee + growthFee + orderFee + infraFee + affFee + flashFee + shipShop;
+    profitPerUnit = custPrice - costUnit - totalFees;
+    rev = custPrice * qty;
+    tc = (costUnit + totalFees) * qty;
+
+    document.getElementById('sp-custprice').textContent = '฿'+fmt(custPrice);
+    document.getElementById('sp-comm').textContent = '฿'+fmt(commFee);
+    document.getElementById('sp-growth').textContent = '฿'+fmt(growthFee);
+    document.getElementById('sp-order').textContent = '฿'+fmt(orderFee);
+    document.getElementById('sp-aff').textContent = '฿'+fmt(affFee);
+    document.getElementById('sp-flash').textContent = '฿'+fmt(flashFee);
+    document.getElementById('sp-shipshop').textContent = '฿'+fmt(shipShop);
+    document.getElementById('sp-totalfee').textContent = '฿'+fmt(totalFees);
+  }
+
+  const profit = profitPerUnit * qty;
+  document.getElementById('sp-cost').textContent = '฿'+fmt(costUnit);
   document.getElementById('sp-revenue').textContent = '฿'+fmt(rev);
   document.getElementById('sp-totalcost').textContent = '฿'+fmt(tc);
   const sp = document.getElementById('sp-profit');
@@ -1354,25 +1436,37 @@ function calcSaleProfit(fromUser) {
 
 async function saveSale() {
   if (!s2CurrentItem) return;
+  const item = s2CurrentItem;
   const qty = parseFloat(document.getElementById('sm-qty').value)||0;
   if (qty<=0) { toast('กรุณาใส่จำนวน'); return; }
-  const rem = s2CurrentItem.qty - (s2SoldMap[s2CurrentItem.id]||0);
+  const rem = item.qty - (s2SoldMap[item.id]||0);
   if (qty>rem) { toast('สต็อกเหลือแค่ '+rem+' ชิ้น'); return; }
   const status = document.getElementById('sm-status');
   status.textContent = '⏳ กำลังบันทึก...';
-  const {error} = await sb.from('sales').insert({
-    item_id: s2CurrentItem.id,
+
+  const row = {
+    item_id: item.id,
     qty_sold: qty,
     sell_price: parseFloat(document.getElementById('sm-price').value)||0,
-    ship_cost: parseFloat(document.getElementById('sm-ship').value)||0,
-    box_cost: parseFloat(document.getElementById('sm-box').value)||0,
-    discount: parseFloat(document.getElementById('sm-discount').value)||0,
     note: document.getElementById('sm-note').value.trim(),
-    tiktok_commission: parseFloat(document.getElementById('sm-tiktok').value)||0,
-    inf_commission: parseFloat(document.getElementById('sm-inf').value)||0,
-    tiktok_flashsale: parseFloat(document.getElementById('sm-flashsale').value)||0,
-  });
-  if (error) { status.textContent = '❌ บันทึกไม่สำเร็จ'; status.style.color='#c53030'; return; }
+    sale_channel: s2Channel,
+  };
+
+  if (s2Channel === 'tiktok') {
+    row.comm_rate = item.comm_rate||7.49;
+    row.growth_rate = item.growth_rate||8.03;
+    row.order_fee_rate = item.order_fee_rate||3.21;
+    row.shipping_customer = item.shipping_customer||0;
+    row.shipping_shop = item.shipping_shop||0;
+    row.shop_discount = item.shop_discount||0;
+    row.tiktok_discount = item.tiktok_discount||0;
+    row.flashsale_price = item.flashsale_price||0;
+    row.inf_commission = item.inf_commission||0;
+    row.tiktok_flashsale = item.tiktok_flashsale||0;
+  }
+
+  const {error} = await sb.from('sales').insert(row);
+  if (error) { status.textContent = '❌ บันทึกไม่สำเร็จ: '+error.message; status.style.color='#c53030'; return; }
   status.textContent = '✅ บันทึกแล้ว!'; status.style.color='#276749';
   setTimeout(()=>{ closeSaleModal(); loadSalesPage(); }, 600);
 }
@@ -1386,6 +1480,7 @@ async function s2DelSale(id) {
 
 // ─── SUMMARY PAGE ─────────────────────────────────
 let currentPeriod = 'all';
+let currentChannel = 'all';
 let currentChartYear = new Date().getFullYear();
 let monthlyChart = null;
 let summaryAllSales = [];
@@ -1394,9 +1489,18 @@ let summaryItemCostMap = {};
 
 function setPeriod(p) {
   currentPeriod = p;
-  document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.period-btn:not(.channel-btn)').forEach(b => b.classList.remove('active'));
   event.target.classList.add('active');
   renderSummary();
+  renderMonthlyChart();
+}
+
+function setChannel(ch) {
+  currentChannel = ch;
+  document.querySelectorAll('.channel-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  renderSummary();
+  renderMonthlyChart();
 }
 
 function changeYear(dir) {
@@ -1449,16 +1553,16 @@ function renderSummary() {
     ? summaryAllSales.filter(s => new Date(s.sold_at) >= rangeStart)
     : summaryAllSales;
 
+  // channel filter
+  const chFiltered = currentChannel === 'all' ? filtered
+    : filtered.filter(s => (s.sale_channel||'shop') === currentChannel);
+
   // ยอดรวม
-  const revenue = filtered.reduce((s, x) => s + x.sell_price * x.qty_sold, 0);
-  const cost = filtered.reduce((s, x) => {
-    const costUnit = summaryItemCostMap[x.item_id] || 0;
-    const flashD = x.sell_price * (x.tiktok_flashsale||0) / 100;
-    const base = x.sell_price - flashD;
-    const comm = (flashD + base*(x.tiktok_commission||0)/100 + base*(x.inf_commission||0)/100) * x.qty_sold;
-    return s + costUnit*x.qty_sold + (x.ship_cost||0) + (x.box_cost||0) - (x.discount||0) + comm;
-  }, 0);
-  const profit = revenue - cost;
+  let revenue = 0, profit = 0, cost = 0;
+  chFiltered.forEach(s => {
+    const r = calcSaleRecord(s, summaryItemCostMap);
+    revenue += r.rev; profit += r.profit; cost += r.costTotal;
+  });
   const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
 
   document.getElementById('sum-revenue').textContent = '฿' + fmt(revenue);
@@ -1469,7 +1573,7 @@ function renderSummary() {
   const sm = document.getElementById('sum-margin');
   sm.textContent = fmt(margin) + '%';
   sm.style.color = profit >= 0 ? '#276749' : '#c53030';
-  document.getElementById('sum-orders').textContent = filtered.length + ' รายการ';
+  document.getElementById('sum-orders').textContent = chFiltered.length + ' รายการ';
 
   // สต็อก (ทั้งหมดไม่กรองช่วงเวลา)
   const soldMapAll = {};
@@ -1490,18 +1594,15 @@ function renderSummary() {
   const itemMap = {};
   summaryAllItems.forEach(i => itemMap[i.id] = i);
   const productStats = {};
-  filtered.forEach(s => {
-    if (!productStats[s.item_id]) productStats[s.item_id] = { qtySold: 0, revenue: 0, cost: 0 };
-    const costUnit = summaryItemCostMap[s.item_id] || 0;
-    const flashD = s.sell_price * (s.tiktok_flashsale||0) / 100;
-    const base = s.sell_price - flashD;
-    const comm = (flashD + base*(s.tiktok_commission||0)/100 + base*(s.inf_commission||0)/100) * s.qty_sold;
+  chFiltered.forEach(s => {
+    if (!productStats[s.item_id]) productStats[s.item_id] = { qtySold: 0, revenue: 0, profit: 0 };
+    const r = calcSaleRecord(s, summaryItemCostMap);
     productStats[s.item_id].qtySold += s.qty_sold;
-    productStats[s.item_id].revenue += s.sell_price * s.qty_sold;
-    productStats[s.item_id].cost += (costUnit * s.qty_sold) + (s.ship_cost||0) + (s.box_cost||0) - (s.discount||0) + comm;
+    productStats[s.item_id].revenue += r.rev;
+    productStats[s.item_id].profit += r.profit;
   });
 
-  const sorted = Object.entries(productStats).sort((a, b) => (b[1].revenue - b[1].cost) - (a[1].revenue - a[1].cost));
+  const sorted = Object.entries(productStats).sort((a, b) => b[1].profit - a[1].profit);
 
   if (!sorted.length) {
     document.getElementById('sum-products').innerHTML = '<div class="empty">ยังไม่มีข้อมูลในช่วงนี้</div>';
@@ -1510,7 +1611,7 @@ function renderSummary() {
 
   document.getElementById('sum-products').innerHTML = sorted.map(([itemId, stat]) => {
     const item = itemMap[itemId] || {};
-    const profit = stat.revenue - stat.cost;
+    const profit = stat.profit;
     const remaining = item.qty - (soldMapAll[itemId] || 0);
     const imgHtml = item.image_url
       ? `<img src="${item.image_url}" onclick="openLightbox('${item.image_url}')" style="width:40px;height:40px;object-fit:cover;border-radius:6px;flex-shrink:0;cursor:zoom-in">`
@@ -1541,16 +1642,12 @@ function renderMonthlyChart() {
   summaryAllSales.forEach(s => {
     const d = new Date(s.sold_at);
     if (d.getFullYear() !== year) return;
+    if (currentChannel !== 'all' && (s.sale_channel||'shop') !== currentChannel) return;
     const m = d.getMonth();
-    const costUnit = summaryItemCostMap[s.item_id] || 0;
-    const rev = s.sell_price * s.qty_sold;
-    const flashD = s.sell_price * (s.tiktok_flashsale||0) / 100;
-    const base = s.sell_price - flashD;
-    const comm = (flashD + base*(s.tiktok_commission||0)/100 + base*(s.inf_commission||0)/100) * s.qty_sold;
-    const cost = (costUnit * s.qty_sold) + (s.ship_cost||0) + (s.box_cost||0) - (s.discount||0) + comm;
-    revenueByMonth[m] += rev;
-    costByMonth[m] += cost;
-    profitByMonth[m] += rev - cost;
+    const r = calcSaleRecord(s, summaryItemCostMap);
+    revenueByMonth[m] += r.rev;
+    costByMonth[m] += r.costTotal;
+    profitByMonth[m] += r.profit;
   });
 
   const ctx = document.getElementById('monthly-chart').getContext('2d');
