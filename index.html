@@ -480,14 +480,6 @@ body {
         <input class="mini-input" type="number" id="sm-price" min="0" step="0.01" value="0" oninput="calcSaleProfit(true)">
       </div>
       <div class="mini-field">
-        <label>ค่าส่งจริง (฿) <span style="font-size:0.6rem;color:#718096;">ต่อออเดอร์</span></label>
-        <input class="mini-input" type="number" id="sm-ship" min="0" step="0.01" value="0" oninput="calcSaleProfit(true)">
-      </div>
-      <div class="mini-field">
-        <label>ค่ากล่องจริง (฿) <span style="font-size:0.6rem;color:#718096;">ต่อออเดอร์</span></label>
-        <input class="mini-input" type="number" id="sm-box" min="0" step="0.01" value="0" oninput="calcSaleProfit(true)">
-      </div>
-      <div class="mini-field">
         <label>หมายเหตุ</label>
         <input class="mini-input" type="text" id="sm-note" placeholder="เช่น ลูกค้า VIP">
       </div>
@@ -495,6 +487,16 @@ body {
 
     <!-- TikTok fields (hidden for shop mode) -->
     <div id="sm-tiktok-section" style="display:none">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px">
+        <div class="mini-field">
+          <label>ค่าส่งจริง (฿) <span style="font-size:0.6rem;color:#718096;">ต่อออเดอร์</span></label>
+          <input class="mini-input" type="number" id="sm-ship" min="0" step="0.01" value="0" oninput="calcSaleProfit(true)">
+        </div>
+        <div class="mini-field">
+          <label>ค่ากล่องจริง (฿) <span style="font-size:0.6rem;color:#718096;">ต่อออเดอร์</span></label>
+          <input class="mini-input" type="number" id="sm-box" min="0" step="0.01" value="0" oninput="calcSaleProfit(true)">
+        </div>
+      </div>
       <div style="margin:4px 0 8px;font-size:0.7rem;font-weight:600;color:#9333EA;letter-spacing:0.5px;">── ค่าธรรมเนียม TikTok Shop ──</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
         <div class="mini-field">
@@ -1207,9 +1209,8 @@ function calcSaleRecord(s, costMap) {
     const profitUnit = custPrice - costUnit - totalFees;
     return { rev: custPrice * s.qty_sold, profit: profitUnit * s.qty_sold, costTotal: (costUnit + totalFees) * s.qty_sold };
   } else {
-    const pack = (s.ship_cost||0) + (s.box_cost||0);
-    const profitUnit = s.sell_price - costUnit - pack;
-    return { rev: s.sell_price * s.qty_sold, profit: profitUnit * s.qty_sold, costTotal: (costUnit + pack) * s.qty_sold };
+    const profitUnit = s.sell_price - costUnit;
+    return { rev: s.sell_price * s.qty_sold, profit: profitUnit * s.qty_sold, costTotal: costUnit * s.qty_sold };
   }
 }
 
@@ -1423,9 +1424,9 @@ function calcSaleProfit(fromUser) {
   let profitPerUnit, rev, tc;
 
   if (s2Channel === 'shop') {
-    profitPerUnit = price - costUnit - shipActual - boxActual;
+    profitPerUnit = price - costUnit;
     rev = price * qty;
-    tc = (costUnit + shipActual + boxActual) * qty;
+    tc = costUnit * qty;
   } else {
     const fp = item.flashsale_price || 0;
     let custPrice, baseForFee;
@@ -1483,11 +1484,14 @@ async function saveSale() {
     item_id: item.id,
     qty_sold: qty,
     sell_price: parseFloat(document.getElementById('sm-price').value)||0,
-    ship_cost: parseFloat(document.getElementById('sm-ship').value)||0,
-    box_cost: parseFloat(document.getElementById('sm-box').value)||0,
     note: document.getElementById('sm-note').value.trim(),
     sale_channel: s2Channel,
   };
+
+  if (s2Channel === 'tiktok') {
+    row.ship_cost = parseFloat(document.getElementById('sm-ship').value)||0;
+    row.box_cost = parseFloat(document.getElementById('sm-box').value)||0;
+  }
 
   if (s2Channel === 'tiktok') {
     row.comm_rate = item.comm_rate||7.49;
