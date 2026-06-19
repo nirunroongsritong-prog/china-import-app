@@ -721,7 +721,7 @@ function addRow() {
     name: '', qty: 1, price_cny: 0, rate: 4.9, sell_price: 0, image_url: null,
     comm_rate: 7.49, growth_rate: 8.03, order_fee_rate: 3.21,
     shipping_customer: 0, shipping_shop: 0, shop_discount: 0, tiktok_discount: 0, flashsale_price: 0,
-    est_ship: 0, est_box: 0,
+    est_ship: 0, est_box: 0, flashsale_pct: 0,
     inf_commission: 0, tiktok_flashsale: 0,
     _dirty: true, _new: true
   });
@@ -844,7 +844,9 @@ function renderItems() {
         </div>
         <div class="mini-field">
           <label>ส่วนลดแฟลชเซล (%)</label>
-          <div class="mini-calc" style="background:#FEF3C7;color:#92400E;" id="c-fspct-${idx}">-</div>
+          <input class="mini-input" id="c-fspct-${idx}" type="number" min="0" max="100" step="0.01" value="${r.flashsale_pct||''}"
+            oninput="updateFlashPct(${idx},this.value)" placeholder="กรอก % หรือราคาข้างบน"
+            style="background:#FEF3C7;color:#92400E;font-weight:600;">
         </div>
         <div class="mini-field">
           <label>ส่วนลดร้านค้า (฿/ชิ้น) <span style="font-size:0.6rem;color:#718096;" id="c-sd-auto-${idx}"></span></label>
@@ -949,7 +951,46 @@ function syncFlashsale(idx) {
   rows[idx]._dirty = true;
   const el = document.getElementById('fs-' + idx);
   if (el) el.value = val;
+  // sync % from price
+  const sp = rows[idx].sell_price || 0;
+  const pctEl = document.getElementById('c-fspct-' + idx);
+  if (fp > 0 && sp > 0) {
+    const pct = (sp - fp) / sp * 100;
+    rows[idx].flashsale_pct = parseFloat(pct.toFixed(2));
+    if (pctEl) pctEl.value = rows[idx].flashsale_pct;
+  } else {
+    rows[idx].flashsale_pct = 0;
+    if (pctEl) pctEl.value = '';
+  }
   recalc();
+}
+
+function updateFlashPct(idx, val) {
+  const pct = parseFloat(val) || 0;
+  rows[idx].flashsale_pct = pct;
+  const sp = rows[idx].sell_price || 0;
+  if (pct > 0 && sp > 0) {
+    const fp = Math.round(sp * (1 - pct / 100) * 100) / 100;
+    rows[idx].flashsale_price = fp;
+    const fpEl = document.querySelector(`input[oninput*="'flashsale_price'"][oninput*="${idx}"]`);
+    if (fpEl) fpEl.value = fp;
+  } else {
+    rows[idx].flashsale_price = 0;
+    const fpEl = document.querySelector(`input[oninput*="'flashsale_price'"][oninput*="${idx}"]`);
+    if (fpEl) fpEl.value = '';
+  }
+  rows[idx]._dirty = true;
+  syncFlashsaleNoLoop(idx);
+  recalc();
+  triggerAutoSave();
+}
+
+function syncFlashsaleNoLoop(idx) {
+  const fp = rows[idx].flashsale_price || 0;
+  const val = fp > 0 ? 3.21 : 0;
+  rows[idx].tiktok_flashsale = val;
+  const el = document.getElementById('fs-' + idx);
+  if (el) el.value = val;
 }
 
 function applyProfitMult(idx, mult) {
@@ -1060,10 +1101,12 @@ function recalc() {
       g(`c-cost-${idx}`).textContent = '฿' + fmt(costPerUnit);
       g(`c-custprice-${idx}`).textContent = '฿' + fmt(custPrice);
       const fspEl = g(`c-fspct-${idx}`);
-      if (fp > 0 && r.sell_price > 0) {
-        fspEl.textContent = fmt((r.sell_price - fp) / r.sell_price * 100) + '%';
-      } else {
-        fspEl.textContent = '-';
+      if (fspEl && fspEl !== document.activeElement) {
+        if (fp > 0 && r.sell_price > 0) {
+          fspEl.value = parseFloat(((r.sell_price - fp) / r.sell_price * 100).toFixed(2));
+        } else {
+          fspEl.value = '';
+        }
       }
       const sdAuto = g(`c-sd-auto-${idx}`);
       const sdInput = document.getElementById(`sd-${idx}`);
@@ -1130,7 +1173,7 @@ async function saveAll() {
     comm_rate: r.comm_rate||7.49, growth_rate: r.growth_rate||8.03, order_fee_rate: r.order_fee_rate||3.21,
     shipping_customer: r.shipping_customer||0, shipping_shop: r.shipping_shop||0,
     shop_discount: r.shop_discount||0, tiktok_discount: r.tiktok_discount||0, flashsale_price: r.flashsale_price||0,
-    est_ship: r.est_ship||0, est_box: r.est_box||0,
+    est_ship: r.est_ship||0, est_box: r.est_box||0, flashsale_pct: r.flashsale_pct||0,
     inf_commission: r.inf_commission||0, tiktok_flashsale: r.tiktok_flashsale||0,
   }));
 
@@ -1501,6 +1544,7 @@ async function saveSale() {
     row.shop_discount = item.shop_discount||0;
     row.tiktok_discount = item.tiktok_discount||0;
     row.flashsale_price = item.flashsale_price||0;
+    row.flashsale_pct = item.flashsale_pct||0;
     row.inf_commission = item.inf_commission||0;
     row.tiktok_flashsale = item.tiktok_flashsale||0;
   }
