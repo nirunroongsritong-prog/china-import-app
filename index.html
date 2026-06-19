@@ -290,7 +290,6 @@ body {
 <div id="page-warehouse-list" class="page active">
   <div class="container">
     <button class="btn-new" onclick="openNewModal()">+ สร้างรอบสั่งของใหม่</button>
-    <button class="btn-new" style="background:#e53e3e;font-size:0.75rem;padding:6px 12px;margin-left:6px;" onclick="fixShopDiscount()">🔧 ล้าง shop_discount ที่เพี้ยน</button>
     <div id="import-list"></div>
   </div>
 </div>
@@ -1134,6 +1133,10 @@ function recalc() {
         sdInput.value = shopDisc;
         sdInput.disabled = true;
       } else {
+        if (!(r.flashsale_pct > 0)) {
+          r.shop_discount = 0;
+          sdInput.value = 0;
+        }
         sdAuto.textContent = '';
         sdInput.disabled = false;
       }
