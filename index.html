@@ -435,11 +435,22 @@ body {
     <span class="nav-icon">🛒</span>
     <span class="nav-label">ขาย</span>
   </button>
+  <button class="nav-btn" id="nav-cost" onclick="switchTab('cost')">
+    <span class="nav-icon">💰</span>
+    <span class="nav-label">ต้นทุน</span>
+  </button>
   <button class="nav-btn" id="nav-summary" onclick="switchTab('summary')">
     <span class="nav-icon">📊</span>
     <span class="nav-label">สรุป</span>
   </button>
 </nav>
+
+<!-- ══════════════ PAGE: ต้นทุนรวมต่อ SKU ══════════════ -->
+<div id="page-cost" class="page">
+  <div class="container">
+    <div id="cost-content"><div class="loading"><div class="spin"></div></div></div>
+  </div>
+</div>
 
 <!-- Modal: New Import -->
 <div class="overlay" id="modal">
@@ -617,6 +628,13 @@ function switchTab(tab) {
     document.getElementById('btn-back-wrap').style.display = 'none';
     document.getElementById('header-sub').textContent = '';
     loadSalesPage();
+  } else if (tab === 'cost') {
+    document.getElementById('page-cost').classList.add('active');
+    document.getElementById('nav-cost').classList.add('active');
+    document.getElementById('header-title').textContent = '💰 ต้นทุนรวมต่อ SKU';
+    document.getElementById('btn-back-wrap').style.display = 'none';
+    document.getElementById('header-sub').textContent = '';
+    loadCostPage();
   } else if (tab === 'summary') {
     document.getElementById('page-summary').classList.add('active');
     document.getElementById('nav-summary').classList.add('active');
@@ -1582,6 +1600,60 @@ async function s2DelSale(id) {
   await sb.from('sales').delete().eq('id', id);
   toast('ลบแล้ว');
   loadSalesPage();
+}
+
+// ─── COST PAGE ────────────────────────────────────
+async function loadCostPage() {
+  const el = document.getElementById('cost-content');
+  el.innerHTML = '<div class="loading"><div class="spin"></div></div>';
+
+  const [r1, r2] = await Promise.all([
+    sb.from('imports').select('id,shipping_cost,extra_cost'),
+    sb.from('import_items').select('*').order('created_at')
+  ]);
+  const imports = r1.data || [];
+  const items = r2.data || [];
+  if (!items.length) { el.innerHTML = '<div class="empty">ยังไม่มีสินค้าในคลัง</div>'; return; }
+
+  const impMap = {};
+  imports.forEach(i => impMap[i.id] = i);
+
+  let grandTotal = 0;
+  const rowsHtml = items.map(item => {
+    const imp = impMap[item.import_id] || {};
+    const extra = (imp.shipping_cost||0) + (imp.extra_cost||0);
+    const grp = items.filter(x => x.import_id === item.import_id);
+    const totalGoods = grp.reduce((s,x) => s + x.qty * x.price_cny * x.rate, 0);
+    const sub = item.qty * item.price_cny * item.rate;
+    const shipAlloc = totalGoods > 0 ? (sub / totalGoods) * extra : 0;
+    const goodsPerUnit = item.price_cny * item.rate;
+    const shipPerUnit = item.qty > 0 ? shipAlloc / item.qty : 0;
+    const costPerUnit = goodsPerUnit + shipPerUnit;
+    const totalCost = costPerUnit * item.qty;
+    grandTotal += totalCost;
+
+    const img = item.image_url
+      ? '<img src="'+item.image_url+'" onclick="openLightbox(\''+item.image_url+'\')" style="width:40px;height:40px;object-fit:cover;border-radius:6px;cursor:zoom-in">'
+      : '<div style="width:40px;height:40px;background:#f7fafc;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:1rem">📦</div>';
+
+    return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f0f0f0">'
+      + img
+      + '<div style="flex:1;min-width:0">'
+      + '<div style="font-weight:700;font-size:0.88rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(item.name||'ไม่มีชื่อ')+'</div>'
+      + '<div style="font-size:0.72rem;color:#718096">'+item.qty+' ชิ้น · สินค้า ฿'+fmt(goodsPerUnit)+' · ขนส่ง ฿'+fmt(shipPerUnit)+'</div>'
+      + '</div>'
+      + '<div style="text-align:right;flex-shrink:0">'
+      + '<div style="font-size:0.82rem;font-weight:700;color:#c53030">฿'+fmt(costPerUnit)+'/ชิ้น</div>'
+      + '<div style="font-size:0.72rem;color:#718096">รวม ฿'+fmt(totalCost)+'</div>'
+      + '</div></div>';
+  }).join('');
+
+  el.innerHTML = '<div class="card" style="padding:14px">'
+    + rowsHtml
+    + '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0 4px;border-top:2px solid #9333EA;margin-top:4px">'
+    + '<div style="font-weight:700;font-size:0.95rem;color:#9333EA">ต้นทุนรวมทั้งหมด</div>'
+    + '<div style="font-weight:700;font-size:1.1rem;color:#c53030">฿'+fmt(grandTotal)+'</div>'
+    + '</div></div>';
 }
 
 // ─── SUMMARY PAGE ─────────────────────────────────
