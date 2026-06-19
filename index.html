@@ -795,6 +795,10 @@ function renderItems() {
             oninput="updateRow(${idx},'flashsale_price',this.value)" placeholder="ว่าง = ไม่เข้าแคมเปญ">
         </div>
         <div class="mini-field">
+          <label>ส่วนลดแฟลชเซล (%)</label>
+          <div class="mini-calc" style="background:#FEF3C7;color:#92400E;" id="c-fspct-${idx}">-</div>
+        </div>
+        <div class="mini-field">
           <label>ส่วนลดร้านค้า (฿/ชิ้น) <span style="font-size:0.6rem;color:#718096;" id="c-sd-auto-${idx}"></span></label>
           <input class="mini-input" id="sd-${idx}" type="number" min="0" step="0.01" value="${r.shop_discount||0}"
             oninput="updateRow(${idx},'shop_discount',this.value)">
@@ -971,7 +975,7 @@ function recalc() {
     const flashFee = baseForFee * (r.tiktok_flashsale||0) / 100;
     const shipShop = r.shipping_shop || 0;
     const totalFees = commFee + growthFee + orderFee + infraFee + affFee + flashFee + shipShop;
-    const profitUnit = r.sell_price - costPerUnit - totalFees;
+    const profitUnit = custPrice - costPerUnit - totalFees;
     const profitTotal = profitUnit * r.qty;
 
     totCost += sub + shipAlloc;
@@ -988,6 +992,12 @@ function recalc() {
       g(`c-ship-${idx}`).textContent = '฿' + fmt(shipPerUnit);
       g(`c-cost-${idx}`).textContent = '฿' + fmt(costPerUnit);
       g(`c-custprice-${idx}`).textContent = '฿' + fmt(custPrice);
+      const fspEl = g(`c-fspct-${idx}`);
+      if (fp > 0 && r.sell_price > 0) {
+        fspEl.textContent = fmt((r.sell_price - fp) / r.sell_price * 100) + '%';
+      } else {
+        fspEl.textContent = '-';
+      }
       const sdAuto = g(`c-sd-auto-${idx}`);
       const sdInput = document.getElementById(`sd-${idx}`);
       if (fp > 0) {
