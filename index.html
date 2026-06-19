@@ -672,7 +672,9 @@ function addRow() {
   rows.push({
     id: null, import_id: currentImport.id,
     name: '', qty: 1, price_cny: 0, rate: 4.9, sell_price: 0, image_url: null,
-    tiktok_commission: 0, inf_commission: 0, tiktok_flashsale: 0,
+    comm_rate: 7.49, growth_rate: 8.03, order_fee_rate: 3.21,
+    shipping_customer: 0, shipping_shop: 0,
+    inf_commission: 0, tiktok_flashsale: 0,
     _dirty: true, _new: true
   });
   renderItems();
@@ -791,27 +793,64 @@ function renderItems() {
           <label>ราคารวม (ต้นทุน+กำไร) (฿)</label>
           <div class="mini-calc orange" id="c-sellrec-${idx}">฿0.00</div>
         </div>
+        <div style="margin:8px 0 4px;font-size:0.7rem;font-weight:600;color:#9333EA;letter-spacing:0.5px;">── ค่าธรรมเนียม TikTok Shop ──</div>
         <div class="mini-field">
-          <label>TikTok Commission (30% คงที่)</label>
-          <div class="mini-calc" style="background:#F3E8FF;color:#7E22CE;" id="c-ttk-${idx}">฿0.00</div>
+          <label>ค่าคอมมิชชั่น (%)</label>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <input class="mini-input" type="number" min="0" max="100" step="0.01" value="${r.comm_rate||7.49}"
+              oninput="updateRow(${idx},'comm_rate',this.value)" style="flex:1;">
+            <div class="mini-calc" style="flex:1;background:#F3E8FF;color:#7E22CE;" id="c-comm-${idx}">฿0.00</div>
+          </div>
         </div>
         <div class="mini-field">
-          <label>ราคารวมทั้งหมด (฿)</label>
-          <div class="mini-calc" style="background:#EDE9FE;color:#6D28D9;font-weight:600;" id="c-grandtotal-${idx}">฿0.00</div>
+          <label>ค่าเติบโตร้านค้า (%) <span style="font-size:0.6rem;color:#9333EA;">สูงสุด ฿199</span></label>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <input class="mini-input" type="number" min="0" max="100" step="0.01" value="${r.growth_rate||8.03}"
+              oninput="updateRow(${idx},'growth_rate',this.value)" style="flex:1;">
+            <div class="mini-calc" style="flex:1;background:#F3E8FF;color:#7E22CE;" id="c-growth-${idx}">฿0.00</div>
+          </div>
         </div>
         <div class="mini-field">
-          <label>Influencer/Affiliate (%)</label>
-          <input class="mini-input" type="number" min="0" max="100" step="0.1" value="${r.inf_commission||0}"
-            oninput="updateRow(${idx},'inf_commission',this.value)">
+          <label>ค่าส่งลูกค้า (฿) <span style="font-size:0.6rem;color:#718096;">สำหรับคำนวณค่าธรรมเนียมออเดอร์</span></label>
+          <input class="mini-input" type="number" min="0" step="0.01" value="${r.shipping_customer||0}"
+            oninput="updateRow(${idx},'shipping_customer',this.value)">
         </div>
         <div class="mini-field">
-          <label>TikTok Flashsale (%)</label>
-          <input class="mini-input" type="number" min="0" max="100" step="0.1" value="${r.tiktok_flashsale||0}"
-            oninput="updateRow(${idx},'tiktok_flashsale',this.value)">
+          <label>ค่าธรรมเนียมออเดอร์ (%)</label>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <input class="mini-input" type="number" min="0" max="100" step="0.01" value="${r.order_fee_rate||3.21}"
+              oninput="updateRow(${idx},'order_fee_rate',this.value)" style="flex:1;">
+            <div class="mini-calc" style="flex:1;background:#F3E8FF;color:#7E22CE;" id="c-order-${idx}">฿0.00</div>
+          </div>
         </div>
         <div class="mini-field">
-          <label>ราคาหลัง Flashsale (฿)</label>
-          <div class="mini-calc" style="background:#FEF3C7;color:#92400E;" id="c-flash-${idx}">฿0.00</div>
+          <label>ค่าโครงสร้างพื้นฐาน</label>
+          <div class="mini-calc" style="background:#F3E8FF;color:#7E22CE;">฿1.07</div>
+        </div>
+        <div class="mini-field">
+          <label>ค่าส่งที่ร้านรับผิดชอบ (฿/ชิ้น)</label>
+          <input class="mini-input" type="number" min="0" step="0.01" value="${r.shipping_shop||0}"
+            oninput="updateRow(${idx},'shipping_shop',this.value)">
+        </div>
+        <div class="mini-field">
+          <label>Affiliate (%)</label>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <input class="mini-input" type="number" min="0" max="100" step="0.1" value="${r.inf_commission||0}"
+              oninput="updateRow(${idx},'inf_commission',this.value)" style="flex:1;">
+            <div class="mini-calc" style="flex:1;background:#F3E8FF;color:#7E22CE;" id="c-aff-${idx}">฿0.00</div>
+          </div>
+        </div>
+        <div class="mini-field">
+          <label>Flashsale (%)</label>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <input class="mini-input" type="number" min="0" max="100" step="0.1" value="${r.tiktok_flashsale||0}"
+              oninput="updateRow(${idx},'tiktok_flashsale',this.value)" style="flex:1;">
+            <div class="mini-calc" style="flex:1;background:#FEF3C7;color:#92400E;" id="c-flash-${idx}">฿0.00</div>
+          </div>
+        </div>
+        <div class="mini-field">
+          <label>รวมค่าธรรมเนียมทั้งหมด (฿)</label>
+          <div class="mini-calc" style="background:#EDE9FE;color:#6D28D9;font-weight:600;" id="c-totalfee-${idx}">฿0.00</div>
         </div>
         <div class="mini-field">
           <label>กำไร/ชิ้น (฿)</label>
@@ -894,34 +933,37 @@ function recalc() {
     const shipAlloc = totalGoods > 0 ? (sub / totalGoods) * totalExtra : 0;
     const shipPerUnit = r.qty > 0 ? shipAlloc / r.qty : 0;
     const costPerUnit = goodsPerUnit + shipPerUnit;
-    const flashsaleDeduct = r.sell_price * (r.tiktok_flashsale||0) / 100;
-    const basePrice = r.sell_price - flashsaleDeduct;
-    const tiktokFee = basePrice * 0.30;
-    const infFee = basePrice * (r.inf_commission||0) / 100;
-    const commissionPerUnit = flashsaleDeduct + tiktokFee + infFee;
-    const profitUnit = r.sell_price - costPerUnit - commissionPerUnit;
+    const commFee = r.sell_price * (r.comm_rate||7.49) / 100;
+    const growthFee = Math.min(r.sell_price * (r.growth_rate||8.03) / 100, 199);
+    const orderFee = (r.sell_price + (r.shipping_customer||0)) * (r.order_fee_rate||3.21) / 100;
+    const infraFee = 1.07;
+    const affFee = r.sell_price * (r.inf_commission||0) / 100;
+    const flashFee = r.sell_price * (r.tiktok_flashsale||0) / 100;
+    const shipShop = r.shipping_shop || 0;
+    const totalFees = commFee + growthFee + orderFee + infraFee + affFee + flashFee + shipShop;
+    const profitUnit = r.sell_price - costPerUnit - totalFees;
     const profitTotal = profitUnit * r.qty;
 
     totCost += sub + shipAlloc;
-    totComm += commissionPerUnit * r.qty;
+    totComm += totalFees * r.qty;
     totSell += r.sell_price * r.qty;
     totQty += r.qty;
     totCny += r.qty * r.price_cny;
 
     const g = id => document.getElementById(id);
     r._costPerUnit = costPerUnit;
-    const tiktokFee30 = r.sell_price * 0.30;
-    const grandTotal = r.sell_price + tiktokFee30;
     if (g(`c-goods-${idx}`)) {
       g(`c-cny-${idx}`).textContent = '¥' + fmt(r.qty * r.price_cny);
       g(`c-goods-${idx}`).textContent = '฿' + fmt(goodsPerUnit);
       g(`c-ship-${idx}`).textContent = '฿' + fmt(shipPerUnit);
       g(`c-cost-${idx}`).textContent = '฿' + fmt(costPerUnit);
       g(`c-sellrec-${idx}`).textContent = '฿' + fmt(r.sell_price);
-      const flashPrice = r.sell_price - (r.sell_price * (r.tiktok_flashsale||0) / 100);
-      g(`c-flash-${idx}`).textContent = '฿' + fmt(flashPrice);
-      g(`c-ttk-${idx}`).textContent = '฿' + fmt(tiktokFee30);
-      g(`c-grandtotal-${idx}`).textContent = '฿' + fmt(grandTotal);
+      g(`c-comm-${idx}`).textContent = '฿' + fmt(commFee);
+      g(`c-growth-${idx}`).textContent = '฿' + fmt(growthFee);
+      g(`c-order-${idx}`).textContent = '฿' + fmt(orderFee);
+      g(`c-aff-${idx}`).textContent = '฿' + fmt(affFee);
+      g(`c-flash-${idx}`).textContent = '฿' + fmt(flashFee);
+      g(`c-totalfee-${idx}`).textContent = '฿' + fmt(totalFees);
       const pu = g(`c-pu-${idx}`);
       pu.textContent = '฿' + fmt(profitUnit);
       pu.className = 'mini-calc ' + (profitUnit >= 0 ? 'green' : 'red');
@@ -967,7 +1009,9 @@ async function saveAll() {
     name: r.name, qty: r.qty,
     price_cny: r.price_cny, rate: r.rate,
     sell_price: r.sell_price, image_url: r.image_url || null,
-    tiktok_commission: r.tiktok_commission||0, inf_commission: r.inf_commission||0, tiktok_flashsale: r.tiktok_flashsale||0,
+    comm_rate: r.comm_rate||7.49, growth_rate: r.growth_rate||8.03, order_fee_rate: r.order_fee_rate||3.21,
+    shipping_customer: r.shipping_customer||0, shipping_shop: r.shipping_shop||0,
+    inf_commission: r.inf_commission||0, tiktok_flashsale: r.tiktok_flashsale||0,
   }));
 
   if (toUpsert.length) {
