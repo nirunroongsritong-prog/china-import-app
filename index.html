@@ -459,46 +459,67 @@ body {
       <div style="font-size:0.78rem;color:#718096;margin-top:2px" id="sm-item-stock">—</div>
     </div>
 
+    <!-- Channel toggle -->
+    <div style="display:flex;gap:0;margin-bottom:14px;border-radius:10px;overflow:hidden;border:1px solid #e2e8f0">
+      <button id="ch-shop" onclick="setSaleChannel('shop')" style="flex:1;padding:10px;border:none;font-size:0.85rem;font-weight:700;cursor:pointer;background:#e53e3e;color:white">🏪 ขายหน้าร้าน</button>
+      <button id="ch-tiktok" onclick="setSaleChannel('tiktok')" style="flex:1;padding:10px;border:none;font-size:0.85rem;font-weight:700;cursor:pointer;background:#f7fafc;color:#718096">🎵 ขายผ่าน TikTok</button>
+    </div>
+
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
       <div class="mini-field">
         <label>จำนวนที่ขาย (ชิ้น)</label>
         <input class="mini-input" type="number" id="sm-qty" min="1" value="1" oninput="calcSaleProfit(true)">
       </div>
       <div class="mini-field">
-        <label>ราคาขาย/ชิ้น (฿)</label>
+        <label id="sm-price-label">ราคาขาย/ชิ้น (฿)</label>
         <input class="mini-input" type="number" id="sm-price" min="0" step="0.01" value="0" oninput="calcSaleProfit(true)">
-      </div>
-      <div class="mini-field">
-        <label>ค่าส่งลูกค้า (฿)</label>
-        <input class="mini-input" type="number" id="sm-ship" min="0" step="0.01" value="0" oninput="calcSaleProfit(true)">
-      </div>
-      <div class="mini-field">
-        <label>ค่ากล่อง (฿)</label>
-        <input class="mini-input" type="number" id="sm-box" min="0" step="0.01" value="0" oninput="calcSaleProfit(true)">
-      </div>
-      <div class="mini-field">
-        <label>ส่วนลด (฿)</label>
-        <input class="mini-input" type="number" id="sm-discount" min="0" step="0.01" value="0" oninput="calcSaleProfit(true)">
       </div>
       <div class="mini-field">
         <label>หมายเหตุ</label>
         <input class="mini-input" type="text" id="sm-note" placeholder="เช่น ลูกค้า VIP">
       </div>
-      <div class="mini-field">
-        <label>TikTok Commission (%)</label>
-        <input class="mini-input" type="number" id="sm-tiktok" min="0" max="100" step="0.1" value="0" oninput="calcSaleProfit(true)">
-      </div>
-      <div class="mini-field">
-        <label>Influencer Commission (%)</label>
-        <input class="mini-input" type="number" id="sm-inf" min="0" max="100" step="0.1" value="0" oninput="calcSaleProfit(true)">
-      </div>
-      <div class="mini-field">
-        <label>TikTok Flashsale (%)</label>
-        <input class="mini-input" type="number" id="sm-flashsale" min="0" max="100" step="0.1" value="0" oninput="calcSaleProfit(true)">
-      </div>
-      <div class="mini-field">
-        <label>Commission/ชิ้น (฿)</label>
-        <div class="mini-calc orange" id="sp-commission">฿0.00</div>
+    </div>
+
+    <!-- TikTok fields (hidden for shop mode) -->
+    <div id="sm-tiktok-section" style="display:none">
+      <div style="margin:4px 0 8px;font-size:0.7rem;font-weight:600;color:#9333EA;letter-spacing:0.5px;">── ค่าธรรมเนียม TikTok Shop ──</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+        <div class="mini-field">
+          <label>ราคาที่ลูกค้าเห็น (฿)</label>
+          <div class="mini-calc" style="background:#DBEAFE;color:#1E40AF;font-weight:600;" id="sp-custprice">฿0</div>
+        </div>
+        <div class="mini-field">
+          <label>ค่าคอมมิชชั่น (<span id="sp-comm-pct">7.49</span>%)</label>
+          <div class="mini-calc" style="background:#F3E8FF;color:#7E22CE;" id="sp-comm">฿0</div>
+        </div>
+        <div class="mini-field">
+          <label>ค่าเติบโตร้านค้า (<span id="sp-growth-pct">8.03</span>%)</label>
+          <div class="mini-calc" style="background:#F3E8FF;color:#7E22CE;" id="sp-growth">฿0</div>
+        </div>
+        <div class="mini-field">
+          <label>ค่าธรรมเนียมออเดอร์ (<span id="sp-order-pct">3.21</span>%)</label>
+          <div class="mini-calc" style="background:#F3E8FF;color:#7E22CE;" id="sp-order">฿0</div>
+        </div>
+        <div class="mini-field">
+          <label>Flashsale (<span id="sp-flash-pct">0</span>%)</label>
+          <div class="mini-calc" style="background:#FEF3C7;color:#92400E;" id="sp-flash">฿0</div>
+        </div>
+        <div class="mini-field">
+          <label>Affiliate (<span id="sp-aff-pct">0</span>%)</label>
+          <div class="mini-calc" style="background:#F3E8FF;color:#7E22CE;" id="sp-aff">฿0</div>
+        </div>
+        <div class="mini-field">
+          <label>ค่าโครงสร้างพื้นฐาน</label>
+          <div class="mini-calc" style="background:#F3E8FF;color:#7E22CE;">฿1.07</div>
+        </div>
+        <div class="mini-field">
+          <label>ค่าส่งที่ร้านรับผิดชอบ</label>
+          <div class="mini-calc" style="background:#F3E8FF;color:#7E22CE;" id="sp-shipshop">฿0</div>
+        </div>
+        <div class="mini-field" style="grid-column:1/-1">
+          <label>รวมค่าธรรมเนียมทั้งหมด (฿)</label>
+          <div class="mini-calc" style="background:#EDE9FE;color:#6D28D9;font-weight:600;" id="sp-totalfee">฿0</div>
+        </div>
       </div>
     </div>
 
