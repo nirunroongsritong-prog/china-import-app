@@ -1196,15 +1196,14 @@ function calcSaleRecord(s, costMap) {
     const infraFee = 1.07;
     const affFee = baseForFee * (s.inf_commission||0) / 100;
     const flashFee = baseForFee * (s.tiktok_flashsale||0) / 100;
-    const shipShop = s.shipping_shop || 0;
+    const shipShop = (s.ship_cost||0) + (s.box_cost||0);
     const totalFees = commFee + growthFee + orderFee + infraFee + affFee + flashFee + shipShop;
     const profitUnit = custPrice - costUnit - totalFees;
-    const pack = (s.ship_cost||0) + (s.box_cost||0);
-    return { rev: custPrice * s.qty_sold, profit: profitUnit * s.qty_sold - pack, costTotal: (costUnit + totalFees) * s.qty_sold + pack };
+    return { rev: custPrice * s.qty_sold, profit: profitUnit * s.qty_sold, costTotal: (costUnit + totalFees) * s.qty_sold };
   } else {
-    const profitUnit = s.sell_price - costUnit;
     const pack = (s.ship_cost||0) + (s.box_cost||0);
-    return { rev: s.sell_price * s.qty_sold, profit: profitUnit * s.qty_sold - pack, costTotal: costUnit * s.qty_sold + pack };
+    const profitUnit = s.sell_price - costUnit - pack;
+    return { rev: s.sell_price * s.qty_sold, profit: profitUnit * s.qty_sold, costTotal: (costUnit + pack) * s.qty_sold };
   }
 }
 
