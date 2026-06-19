@@ -290,6 +290,7 @@ body {
 <div id="page-warehouse-list" class="page active">
   <div class="container">
     <button class="btn-new" onclick="openNewModal()">+ สร้างรอบสั่งของใหม่</button>
+    <button class="btn-new" style="background:#e53e3e;font-size:0.75rem;padding:6px 12px;margin-left:6px;" onclick="fixShopDiscount()">🔧 ล้าง shop_discount ที่เพี้ยน</button>
     <div id="import-list"></div>
   </div>
 </div>
@@ -944,6 +945,23 @@ function renderItems() {
   }).join('');
 }
 
+async function fixShopDiscount() {
+  if (!confirm('รีเซ็ต shop_discount เป็น 0 สำหรับสินค้าที่ไม่ได้เข้าแฟลชเซล?')) return;
+  const { data, error } = await sb.from('import_items')
+    .update({ shop_discount: 0 })
+    .or('flashsale_price.eq.0,flashsale_price.is.null');
+  if (error) { toast('❌ ล้างไม่สำเร็จ: ' + error.message); return; }
+  // ล้างใน local rows ด้วย
+  rows.forEach(r => {
+    if (!r.flashsale_price || r.flashsale_price === 0) {
+      r.shop_discount = 0;
+    }
+  });
+  renderItems();
+  recalc();
+  toast('✅ ล้าง shop_discount เสร็จแล้ว — รีเฟรชหน้าเพื่อเช็ค');
+}
+
 function syncFlashsale(idx) {
   const fp = rows[idx].flashsale_price || 0;
   const val = fp > 0 ? 3.21 : 0;
@@ -1111,6 +1129,7 @@ function recalc() {
       const sdAuto = g(`c-sd-auto-${idx}`);
       const sdInput = document.getElementById(`sd-${idx}`);
       if (fp > 0) {
+        r.shop_discount = shopDisc;
         sdAuto.textContent = '(auto ฿' + fmt(shopDisc) + ')';
         sdInput.value = shopDisc;
         sdInput.disabled = true;
