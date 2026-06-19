@@ -670,7 +670,7 @@ async function loadList() {
       const growthFee = Math.min(baseForFee * (i.growth_rate||8.03) / 100, 199);
       const orderFee = (baseForFee + (i.shipping_customer||0)) * (i.order_fee_rate||3.21) / 100;
       const totalFees = commFee + growthFee + orderFee + 1.07 + baseForFee*(i.inf_commission||0)/100 + baseForFee*(i.tiktok_flashsale||0)/100 + (i.est_ship||0) + (i.est_box||0);
-      const profitUnit = custPrice - costPerUnit - totalFees - (i.est_ship||0) - (i.est_box||0);
+      const profitUnit = custPrice - costPerUnit - totalFees;
       totalProfit += profitUnit * i.qty;
       return s + sub + ship;
     }, 0);
