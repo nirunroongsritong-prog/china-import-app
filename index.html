@@ -792,7 +792,7 @@ function renderItems() {
         <div class="mini-field">
           <label>ราคาแฟลชเซลที่ตั้งไว้ (฿/ชิ้น) <span style="font-size:0.6rem;color:#9333EA;">ถ้ามี</span></label>
           <input class="mini-input" type="number" min="0" step="0.01" value="${r.flashsale_price||''}"
-            oninput="updateRow(${idx},'flashsale_price',this.value)" placeholder="ว่าง = ไม่เข้าแคมเปญ">
+            oninput="updateRow(${idx},'flashsale_price',this.value);syncFlashsale(${idx})" placeholder="ว่าง = ไม่เข้าแคมเปญ">
         </div>
         <div class="mini-field">
           <label>ส่วนลดแฟลชเซล (%)</label>
@@ -886,6 +886,16 @@ function renderItems() {
       </div>
     </div>`;
   }).join('');
+}
+
+function syncFlashsale(idx) {
+  const fp = rows[idx].flashsale_price || 0;
+  const val = fp > 0 ? 3.21 : 0;
+  rows[idx].tiktok_flashsale = val;
+  rows[idx]._dirty = true;
+  const fsInputs = document.querySelectorAll(`[oninput*="'tiktok_flashsale'"]`);
+  const el = document.querySelector(`input[oninput="updateRow(${idx},'tiktok_flashsale',this.value)"]`);
+  if (el) el.value = val;
 }
 
 function applyProfitMult(idx, mult) {
