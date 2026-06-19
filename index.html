@@ -480,6 +480,14 @@ body {
         <input class="mini-input" type="number" id="sm-price" min="0" step="0.01" value="0" oninput="calcSaleProfit(true)">
       </div>
       <div class="mini-field">
+        <label>ค่าส่งจริง (฿) <span style="font-size:0.6rem;color:#718096;">ต่อออเดอร์</span></label>
+        <input class="mini-input" type="number" id="sm-ship" min="0" step="0.01" value="0" oninput="calcSaleProfit(true)">
+      </div>
+      <div class="mini-field">
+        <label>ค่ากล่องจริง (฿) <span style="font-size:0.6rem;color:#718096;">ต่อออเดอร์</span></label>
+        <input class="mini-input" type="number" id="sm-box" min="0" step="0.01" value="0" oninput="calcSaleProfit(true)">
+      </div>
+      <div class="mini-field">
         <label>หมายเหตุ</label>
         <input class="mini-input" type="text" id="sm-note" placeholder="เช่น ลูกค้า VIP">
       </div>
@@ -700,6 +708,7 @@ function addRow() {
     name: '', qty: 1, price_cny: 0, rate: 4.9, sell_price: 0, image_url: null,
     comm_rate: 7.49, growth_rate: 8.03, order_fee_rate: 3.21,
     shipping_customer: 0, shipping_shop: 0, shop_discount: 0, tiktok_discount: 0, flashsale_price: 0,
+    est_ship: 0, est_box: 0,
     inf_commission: 0, tiktok_flashsale: 0,
     _dirty: true, _new: true
   });
@@ -901,12 +910,23 @@ function renderItems() {
           <label>รวมค่าธรรมเนียมทั้งหมด (฿)</label>
           <div class="mini-calc" style="background:#EDE9FE;color:#6D28D9;font-weight:600;" id="c-totalfee-${idx}">฿0.00</div>
         </div>
+        <div style="margin:8px 0 4px;font-size:0.7rem;font-weight:600;color:#718096;letter-spacing:0.5px;">── ค่าส่ง/แพ็คโดยประมาณ ──</div>
         <div class="mini-field">
-          <label>กำไร/ชิ้น (฿)</label>
+          <label>ค่าส่งโดยประมาณ/ชิ้น (฿)</label>
+          <input class="mini-input" type="number" min="0" step="0.01" value="${r.est_ship||0}"
+            oninput="updateRow(${idx},'est_ship',this.value)">
+        </div>
+        <div class="mini-field">
+          <label>ค่ากล่อง/แพ็คโดยประมาณ/ชิ้น (฿)</label>
+          <input class="mini-input" type="number" min="0" step="0.01" value="${r.est_box||0}"
+            oninput="updateRow(${idx},'est_box',this.value)">
+        </div>
+        <div class="mini-field">
+          <label>กำไรคาดการณ์/ชิ้น (฿)</label>
           <div class="mini-calc" id="c-pu-${idx}">฿0.00</div>
         </div>
         <div class="mini-field">
-          <label>กำไรรวม (฿)</label>
+          <label>กำไรคาดการณ์รวม (฿)</label>
           <div class="mini-calc" id="c-pt-${idx}">฿0.00</div>
         </div>
       </div>
@@ -1010,8 +1030,10 @@ function recalc() {
     const affFee = baseForFee * (r.inf_commission||0) / 100;
     const flashFee = baseForFee * (r.tiktok_flashsale||0) / 100;
     const shipShop = r.shipping_shop || 0;
+    const estShip = r.est_ship || 0;
+    const estBox = r.est_box || 0;
     const totalFees = commFee + growthFee + orderFee + infraFee + affFee + flashFee + shipShop;
-    const profitUnit = custPrice - costPerUnit - totalFees;
+    const profitUnit = custPrice - costPerUnit - totalFees - estShip - estBox;
     const profitTotal = profitUnit * r.qty;
 
     totCost += sub + shipAlloc;
@@ -1100,6 +1122,7 @@ async function saveAll() {
     comm_rate: r.comm_rate||7.49, growth_rate: r.growth_rate||8.03, order_fee_rate: r.order_fee_rate||3.21,
     shipping_customer: r.shipping_customer||0, shipping_shop: r.shipping_shop||0,
     shop_discount: r.shop_discount||0, tiktok_discount: r.tiktok_discount||0, flashsale_price: r.flashsale_price||0,
+    est_ship: r.est_ship||0, est_box: r.est_box||0,
     inf_commission: r.inf_commission||0, tiktok_flashsale: r.tiktok_flashsale||0,
   }));
 
@@ -1176,10 +1199,12 @@ function calcSaleRecord(s, costMap) {
     const shipShop = s.shipping_shop || 0;
     const totalFees = commFee + growthFee + orderFee + infraFee + affFee + flashFee + shipShop;
     const profitUnit = custPrice - costUnit - totalFees;
-    return { rev: custPrice * s.qty_sold, profit: profitUnit * s.qty_sold, costTotal: (costUnit + totalFees) * s.qty_sold };
+    const pack = (s.ship_cost||0) + (s.box_cost||0);
+    return { rev: custPrice * s.qty_sold, profit: profitUnit * s.qty_sold - pack, costTotal: (costUnit + totalFees) * s.qty_sold + pack };
   } else {
     const profitUnit = s.sell_price - costUnit;
-    return { rev: s.sell_price * s.qty_sold, profit: profitUnit * s.qty_sold, costTotal: costUnit * s.qty_sold };
+    const pack = (s.ship_cost||0) + (s.box_cost||0);
+    return { rev: s.sell_price * s.qty_sold, profit: profitUnit * s.qty_sold - pack, costTotal: costUnit * s.qty_sold + pack };
   }
 }
 
@@ -1362,6 +1387,8 @@ function s2OpenModal(idx) {
   document.getElementById('sm-qty').value = 1;
   document.getElementById('sm-qty').max = rem;
   document.getElementById('sm-price').value = item.sell_price||0;
+  document.getElementById('sm-ship').value = item.est_ship||0;
+  document.getElementById('sm-box').value = item.est_box||0;
   document.getElementById('sm-note').value = '';
   s2UserTyped = false;
   clearTimeout(s2SaveTimer);
@@ -1384,13 +1411,16 @@ function calcSaleProfit(fromUser) {
   const costUnit = s2CostMap[item.id]||0;
   const qty = parseFloat(document.getElementById('sm-qty').value)||0;
   const price = parseFloat(document.getElementById('sm-price').value)||0;
+  const shipActual = parseFloat(document.getElementById('sm-ship').value)||0;
+  const boxActual = parseFloat(document.getElementById('sm-box').value)||0;
+  const packCost = shipActual + boxActual;
 
   let profitPerUnit, rev, tc;
 
   if (s2Channel === 'shop') {
     profitPerUnit = price - costUnit;
     rev = price * qty;
-    tc = costUnit * qty;
+    tc = costUnit * qty + packCost;
   } else {
     const fp = item.flashsale_price || 0;
     let custPrice, baseForFee;
@@ -1412,7 +1442,7 @@ function calcSaleProfit(fromUser) {
     const totalFees = commFee + growthFee + orderFee + infraFee + affFee + flashFee + shipShop;
     profitPerUnit = custPrice - costUnit - totalFees;
     rev = custPrice * qty;
-    tc = (costUnit + totalFees) * qty;
+    tc = (costUnit + totalFees) * qty + packCost;
 
     document.getElementById('sp-custprice').textContent = '฿'+fmt(custPrice);
     document.getElementById('sp-comm').textContent = '฿'+fmt(commFee);
@@ -1424,7 +1454,7 @@ function calcSaleProfit(fromUser) {
     document.getElementById('sp-totalfee').textContent = '฿'+fmt(totalFees);
   }
 
-  const profit = profitPerUnit * qty;
+  const profit = profitPerUnit * qty - packCost;
   document.getElementById('sp-cost').textContent = '฿'+fmt(costUnit);
   document.getElementById('sp-revenue').textContent = '฿'+fmt(rev);
   document.getElementById('sp-totalcost').textContent = '฿'+fmt(tc);
@@ -1448,6 +1478,8 @@ async function saveSale() {
     item_id: item.id,
     qty_sold: qty,
     sell_price: parseFloat(document.getElementById('sm-price').value)||0,
+    ship_cost: parseFloat(document.getElementById('sm-ship').value)||0,
+    box_cost: parseFloat(document.getElementById('sm-box').value)||0,
     note: document.getElementById('sm-note').value.trim(),
     sale_channel: s2Channel,
   };
