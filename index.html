@@ -1418,9 +1418,9 @@ function calcSaleProfit(fromUser) {
   let profitPerUnit, rev, tc;
 
   if (s2Channel === 'shop') {
-    profitPerUnit = price - costUnit;
+    profitPerUnit = price - costUnit - shipActual - boxActual;
     rev = price * qty;
-    tc = costUnit * qty + packCost;
+    tc = (costUnit + shipActual + boxActual) * qty;
   } else {
     const fp = item.flashsale_price || 0;
     let custPrice, baseForFee;
@@ -1442,7 +1442,7 @@ function calcSaleProfit(fromUser) {
     const totalFees = commFee + growthFee + orderFee + infraFee + affFee + flashFee + shipShop;
     profitPerUnit = custPrice - costUnit - totalFees;
     rev = custPrice * qty;
-    tc = (costUnit + totalFees) * qty + packCost;
+    tc = (costUnit + totalFees) * qty;
 
     document.getElementById('sp-custprice').textContent = '฿'+fmt(custPrice);
     document.getElementById('sp-comm').textContent = '฿'+fmt(commFee);
@@ -1454,7 +1454,7 @@ function calcSaleProfit(fromUser) {
     document.getElementById('sp-totalfee').textContent = '฿'+fmt(totalFees);
   }
 
-  const profit = profitPerUnit * qty - packCost;
+  const profit = profitPerUnit * qty;
   document.getElementById('sp-cost').textContent = '฿'+fmt(costUnit);
   document.getElementById('sp-revenue').textContent = '฿'+fmt(rev);
   document.getElementById('sp-totalcost').textContent = '฿'+fmt(tc);
